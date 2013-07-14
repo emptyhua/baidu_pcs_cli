@@ -108,7 +108,6 @@ int init_api() {
     const char *token;
     const char *error;
     char config[1024];
-    char config_mode[] = "0600";
     char buf[1024];
     int i = 0;
 
@@ -140,8 +139,7 @@ int init_api() {
         fclose(fp);
         fp = NULL;
         /* 确保只有自己读写 */
-        i = strtol(config_mode, 0, 8);
-        chmod(config, i);
+        chmod(config, 0600);
     } else {
 #ifdef DEBUG
         fprintf(stderr, "没有已存token %s\n", config);
@@ -158,8 +156,7 @@ int init_api() {
                 fclose(fp);
                 fp = NULL;
                 /* 确保只有自己读写 */
-                i = strtol(config_mode, 0, 8);
-                chmod(config, i);
+                chmod(config, 0600);
             } else {
                 fprintf(stderr, "%s 无法写入\n", config);        
                 ret = 0;
