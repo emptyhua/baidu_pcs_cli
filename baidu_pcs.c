@@ -18,15 +18,15 @@
 #include "pcs.h"
 
 /* pcs api key */
-static const char *option_api_key     = "EeONqeIfLl7k9aSVAdGEXald";
+static const char *option_api_key     = "";
 /* pcs api secret */
-static const char *option_api_secret  = "wtVBuItWtIgt0gs62DKiRx710eSvcVPF";
+static const char *option_api_secret  = "";
 
 static BaiduPCS *api = NULL;
 
 void readable_timestamp(time_t t, char *buf) {
 //{{{
-    struct tm * timeinfo;
+    struct tm *timeinfo;
     timeinfo = localtime(&t);
     strftime(buf, 80, "%H:%M/%Y-%m-%d", timeinfo);
 }
