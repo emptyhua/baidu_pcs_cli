@@ -345,6 +345,9 @@ int split_size              /* 分片大小 */
                         free(c_file->userdata);
                         c_file->userdata = strdup(t_remote_path);
                         remote_path = c_file->userdata;
+                        PCSFile_Free(remote_file);
+                        remote_file = NULL;
+                        continue;
                     /* upload xx.txt /apps/xx/xx.txt */
                     } else if (!overwrite && !create_new) {
                         fprintf(stderr, "IGNORE: %s -> %s 远端已存在\n", c_file->path, remote_file->path);
