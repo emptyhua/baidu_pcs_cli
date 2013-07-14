@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <libgen.h>
 #include "pcs.h"
 
 static void _BaiduPCS_Json2File(BaiduPCS *api, PCSFile *file, cJSON *array);
@@ -364,7 +365,9 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
     cJSON *item         = NULL;
     cJSON *array        = NULL;
 
+    /* 最大分片 2G  */
     size_t max_split_size = 2 * 1024 * 1024 * (size_t)1024;
+    /* 最小分片 10M */
     size_t min_split_size = 10 * 1024 * 1024;
 
     api->error[0] = '\0';
@@ -411,25 +414,21 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
         block->fp = fp;
 
         HttpClient_Init(client);
-        if (1) { //local_file->block->next != NULL) {
-            curl_formadd(&post, &last,
-                         CURLFORM_COPYNAME, "file",
-                         CURLFORM_STREAM, block,
-                         CURLFORM_CONTENTSLENGTH, block->size,
-                         CURLFORM_END);
+        curl_formadd(&post, &last,
+                     CURLFORM_COPYNAME, "file",
+                     CURLFORM_STREAM, block,
+                     CURLFORM_CONTENTSLENGTH, block->size,
+                     CURLFORM_CONTENTTYPE, "application/octet-stream",
+                     CURLFORM_FILENAME, basename(local_file->path),
+                     CURLFORM_END);
 
-            curl_easy_setopt(client->curl, CURLOPT_READFUNCTION, _BaiduPCS_UploadReadCallback);
+        curl_easy_setopt(client->curl, CURLOPT_READFUNCTION, _BaiduPCS_UploadReadCallback);
+        //失败重试前，重置block
+        HttpClient_SetFailRetryCallback(client, _BaiduPCS_UploadResetCallback, block);
+
 #ifdef DEBUG
-            curl_easy_setopt(client->curl, CURLOPT_VERBOSE, 1);
+        //HttpClient_SetDebug(client, 1);
 #endif 
-            //失败重试前，重置block
-            HttpClient_SetFailRetryCallback(client, _BaiduPCS_UploadResetCallback, block);
-        } else {
-            curl_formadd(&post, &last,
-                         CURLFORM_COPYNAME, "file",
-                         CURLFORM_FILE, local_file->path,
-                         CURLFORM_END);
-        }
 
         HttpClient_PostHttpData(client, url_buffer, post);
 

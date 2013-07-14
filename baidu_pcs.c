@@ -126,8 +126,14 @@ int init_api() {
 
     fp = fopen(config, "rb");
     if (fp != NULL) {
-        i = fread(buf, 1, 1024, fp);
-        snprintf(api->token, i + 1, "%s", buf);
+        i = fread(buf, 1, 1023, fp);
+        buf[i] = '\0';
+        for (; i >= 0; i--) {
+            if (buf[i] == '\r' || buf[i] == '\n') {
+                buf[i] = '\0';
+            }
+        }
+        snprintf(api->token, 1024, "%s", buf);
 #ifdef DEBUG
         fprintf(stderr, "已存token: %s\n", api->token);
 #endif
@@ -1006,6 +1012,7 @@ int main(int argc, char **argv) {
     if (api != NULL) {
         BaiduPCS_Free(api);
     }
+    curl_global_cleanup();
     return ret;
 }
 //}}}
