@@ -317,8 +317,14 @@ static size_t _BaiduPCS_UploadReadCallback(void *ptr, size_t size, size_t nitems
     if (left < len) {
         len = left; 
     }
+    if (!len) return 0;
     len = fread(ptr, 1, len, block->fp);
     block->readed_size += len;
+#ifdef DEBUG
+    fprintf(stderr, "block size %lld, uploaded %lld\n",
+            (unsigned long long)block->size,
+            (unsigned long long)block->readed_size);
+#endif
     return len;
 }
 //}}}
@@ -404,16 +410,27 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
 #endif 
         block->fp = fp;
 
-        curl_formadd(&post, &last,
-                     CURLFORM_COPYNAME, "file",
-                     CURLFORM_STREAM, block,
-                     CURLFORM_CONTENTSLENGTH, block->size,
-                     CURLFORM_END);
-
         HttpClient_Init(client);
-        curl_easy_setopt(client->curl, CURLOPT_READFUNCTION, _BaiduPCS_UploadReadCallback);
-        //失败重试前，重置block
-        HttpClient_SetFailRetryCallback(client, _BaiduPCS_UploadResetCallback, block);
+        if (1) { //local_file->block->next != NULL) {
+            curl_formadd(&post, &last,
+                         CURLFORM_COPYNAME, "file",
+                         CURLFORM_STREAM, block,
+                         CURLFORM_CONTENTSLENGTH, block->size,
+                         CURLFORM_END);
+
+            curl_easy_setopt(client->curl, CURLOPT_READFUNCTION, _BaiduPCS_UploadReadCallback);
+#ifdef DEBUG
+            curl_easy_setopt(client->curl, CURLOPT_VERBOSE, 1);
+#endif 
+            //失败重试前，重置block
+            HttpClient_SetFailRetryCallback(client, _BaiduPCS_UploadResetCallback, block);
+        } else {
+            curl_formadd(&post, &last,
+                         CURLFORM_COPYNAME, "file",
+                         CURLFORM_FILE, local_file->path,
+                         CURLFORM_END);
+        }
+
         HttpClient_PostHttpData(client, url_buffer, post);
 
         error = HttpClient_GetError(client);
