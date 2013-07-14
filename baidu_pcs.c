@@ -715,7 +715,7 @@ int create_new             /* 是否新建 */
         if (file->is_dir) {
             sprintf(t_local_root, "%s", local_path);
             remote_root_offset = strlen(list->first->path);
-            if (lstat(local_path, &(api->file_st)) != -1) {
+            if (stat(local_path, &(api->file_st)) != -1) {
                 if (S_ISDIR(api->file_st.st_mode)){
                     t_local_root[0] = '\0';
                     strcat(t_local_root, local_path);
@@ -733,6 +733,11 @@ int create_new             /* 是否新建 */
         } else {
             sprintf(t_local_root, "%s", dirname(local_path));
             remote_root_offset = strlen(dirname(list->first->path));
+            if (stat(local_path, &(api->file_st)) != -1) {
+                if (S_ISDIR(api->file_st.st_mode)){
+                    sprintf(t_local_root, "%s", local_path);
+                }
+            }
         }
     
 
@@ -742,7 +747,7 @@ int create_new             /* 是否新建 */
             tmp = file->path + remote_root_offset;
             sprintf(t_local_file, "%s%s", t_local_root, tmp);
             /* 本地是否已存在 */
-            local_exist = (lstat(t_local_file, &(api->file_st)) != -1);
+            local_exist = (stat(t_local_file, &(api->file_st)) != -1);
             /* 目录 */
             if (file->is_dir) {
                 /* 本地已存在 */
@@ -974,6 +979,8 @@ int main(int argc, char **argv) {
     argc --;
     argv ++;
     
+    curl_global_init(CURL_GLOBAL_ALL);
+
     if (strcmp(command, "info") == 0) {
         ret = command_info(argc, argv);
     } else if (strcmp(command, "ls") == 0) {
