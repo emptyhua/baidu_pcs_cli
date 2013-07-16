@@ -272,9 +272,9 @@ void HttpClient_Init(HttpClient *client) {
     }
     
     //重置失败次数    
-    client->fail_times		= 0;
-	client->retry_times		= 5;
-	client->retry_interval	= 1;
+    client->fail_times        = 0;
+    client->retry_times       = 5;
+    client->retry_interval    = 1;
 
     //重置失败回调
     client->fail_reset_callback = NULL;
@@ -342,8 +342,8 @@ static CURLcode _HttpClient_Perform(HttpClient *client) {
 /* 设置失败重试 */
 void HttpClient_SetFailRetry(HttpClient *client, int retry_times, int retry_interval) {
 //{{{
-	client->retry_times		= retry_times;
-	client->retry_interval	= retry_interval;
+    client->retry_times        = retry_times;
+    client->retry_interval     = retry_interval;
 }
 //}}}
 
@@ -358,7 +358,7 @@ void HttpClient_SetFailRetryCallback(HttpClient *client, void *callback, void *c
 /* 获取响应头 */
 void HttpClient_SetWillGetHeader(HttpClient *client) {
 //{{{
-	curl_easy_setopt(client->curl, CURLOPT_HEADERFUNCTION, _HttpClient_WriteHeader);
+    curl_easy_setopt(client->curl, CURLOPT_HEADERFUNCTION, _HttpClient_WriteHeader);
     curl_easy_setopt(client->curl, CURLOPT_WRITEHEADER, client);
 }
 //}}}

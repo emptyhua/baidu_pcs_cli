@@ -357,6 +357,7 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
     const char *error   = NULL;
     char *tmp           = NULL;
     const char *response      = NULL;
+    char *remote_path_encode  = NULL;
 
     struct curl_httppost *post = NULL;
     struct curl_httppost *last = NULL;
@@ -480,12 +481,15 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
 
     }
 
+    remote_path_encode = curl_easy_escape(client->curl, remote_file, 0);
     //合并文件分片
     sprintf(url_buffer, "https://c.pcs.baidu.com/rest/2.0/pcs/file?"
                     "access_token=%s"
                     "&method=createsuperfile"
                     "&path=%s"
-                    "&ondup=%s", token, remote_file, ondup);
+                    "&ondup=%s", token, remote_path_encode, ondup);
+    curl_free(remote_path_encode);
+    remote_path_encode = NULL;
 
 #ifdef DEBUG
     fprintf(stderr, "request %s\n", url_buffer);    
@@ -582,17 +586,21 @@ void BaiduPCS_Download(BaiduPCS *api, const char *remote_file, FILE *local_fp) {
 //{{{
     if (remote_file == NULL || local_fp == NULL) return;
 
-    HttpClient *client      = api->client;
-    char *url_buffer        = api->util_buffer0;
-    const char *token       = api->token;
-    const char *error       = NULL;
+    HttpClient *client          = api->client;
+    char *url_buffer            = api->util_buffer0;
+    const char *token           = api->token;
+    const char *error           = NULL;
+    char *remote_path_encode    = NULL;
 
     api->error[0] = '\0';
 
+    remote_path_encode = curl_easy_escape(client->curl, remote_file, 0);
     sprintf(url_buffer, "https://d.pcs.baidu.com/rest/2.0/pcs/file?"
            "access_token=%s"
            "&method=download"
-           "&path=%s", token, remote_file);
+           "&path=%s", token, remote_path_encode);
+    curl_free(remote_path_encode);
+    remote_path_encode = NULL;
 
 #ifdef DEBUG
     fprintf(stderr, "request %s\n", url_buffer);
@@ -623,16 +631,23 @@ void BaiduPCS_Move(BaiduPCS *api, const char *remote_from, const char * remote_t
     const char *response    = NULL;
     cJSON *json             = NULL; /* 需要释放 */
     cJSON *item             = NULL;
+    char *from_encode       = NULL;
+    char *to_encode         = NULL;
 
     api->error[0] = '\0';
 
-    //sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/file");
+    from_encode = curl_easy_escape(client->curl, remote_from, 0);
+    to_encode   = curl_easy_escape(client->curl, remote_to, 0);
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/file?"
            "access_token=%s"
            "&method=move"
            "&from=%s"
            "&to=%s"
-           , token, remote_from, remote_to);
+           , token, from_encode, to_encode);
+    curl_free(from_encode);
+    curl_free(to_encode);
+    from_encode = NULL;
+    to_encode   = NULL;
 
 #ifdef DEBUG
     fprintf(stderr, "reqeust %s\n", url_buffer);
@@ -682,14 +697,22 @@ void BaiduPCS_Copy(BaiduPCS *api, const char *remote_from, const char * remote_t
     const char *response    = NULL;
     cJSON *json             = NULL; //需要释放
     cJSON *item             = NULL;
+    char *from_encode       = NULL;
+    char *to_encode         = NULL;
 
     api->error[0] = '\0';
 
+    from_encode = curl_easy_escape(client->curl, remote_from, 0);
+    to_encode   = curl_easy_escape(client->curl, remote_to, 0);
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/file?"
            "access_token=%s"
            "&method=copy"
            "&from=%s"
-           "&to=%s", token, remote_from, remote_to);
+           "&to=%s", token, from_encode, to_encode);
+    curl_free(from_encode);
+    curl_free(to_encode);
+    from_encode = NULL;
+    to_encode   = NULL;
 
 #ifdef DEBUG
     fprintf(stderr, "reqeust %s\n", url_buffer);
@@ -738,13 +761,17 @@ void BaiduPCS_Remove(BaiduPCS *api, const char *remote_file) {
     const char *response    = NULL;
     cJSON *json             = NULL; //需要释放
     cJSON *item             = NULL;
+    char *path_encode       = NULL;
 
     api->error[0] = '\0';
 
+    path_encode = curl_easy_escape(client->curl, remote_file, 0);
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/file?"
            "access_token=%s"
            "&method=delete"
-           "&path=%s", token, remote_file);
+           "&path=%s", token, path_encode);
+    curl_free(path_encode);
+    path_encode = NULL;
 
 #ifdef DEBUG
     fprintf(stderr, "reqeust %s\n", url_buffer);
@@ -850,6 +877,7 @@ PCSFile *BaiduPCS_NewRemoteFile(BaiduPCS *api, const char *path) {
            "&method=meta"
            "&path=%s", token, path_encode);
     curl_free(path_encode);
+    path_encode = NULL;
 
 #ifdef DEBUG
     fprintf(stderr, "request %s\n", url_buffer);
