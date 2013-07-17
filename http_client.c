@@ -263,6 +263,9 @@ void HttpClient_Free(HttpClient* client) {
 /* 初始化HttpClient,使用前务必调用 */
 void HttpClient_Init(HttpClient *client) {
 //{{{
+    
+    curl_version_info_data *version;
+
     if (client->curl == NULL) {
         client->curl = curl_easy_init();
         client->responseText = HttpBuffer_New();
@@ -271,33 +274,44 @@ void HttpClient_Init(HttpClient *client) {
         curl_easy_reset(client->curl);
     }
     
-    //重置失败次数    
+    /* 重置失败次数 */ 
     client->fail_times        = 0;
     client->retry_times       = 5;
     client->retry_interval    = 1;
 
-    //重置失败回调
+    /* 重置失败回调 */
     client->fail_reset_callback = NULL;
     client->fail_reset_context  = NULL;
 
-    //清空body cstr
+    /* 清空body cstr */
     if (client->c_responseText != NULL) {
         free(client->c_responseText);
         client->c_responseText = NULL;
     }
 
-    //清空header cstr
+    /* 清空header cstr */
     if (client->c_responseHeader != NULL) {
         free(client->c_responseText);
         client->c_responseText = NULL;
     }
 
-    //curl 初始化
+    /* curl 初始化 */
     curl_easy_setopt(client->curl, CURLOPT_WRITEFUNCTION, _HttpClient_WriteData);
     curl_easy_setopt(client->curl, CURLOPT_WRITEDATA, client);
 
     curl_easy_setopt(client->curl, CURLOPT_SSL_VERIFYPEER, 0);
     curl_easy_setopt(client->curl, CURLOPT_SSL_VERIFYHOST, 0);
+    /* 选个快点的加密算法 */
+    version = curl_version_info(CURLVERSION_NOW);
+    if (strstr(version->ssl_version, "OpenSSL") != NULL) {
+        curl_easy_setopt(client->curl, CURLOPT_SSL_CIPHER_LIST, "RC4-SHA");
+    } else if (strstr(version->ssl_version, "NSS") != NULL) {
+        curl_easy_setopt(client->curl, CURLOPT_SSL_CIPHER_LIST, "rc4,rsa_rc4_128_sha");
+    }
+
+    /* 设置默认超时时间 */
+    curl_easy_setopt(client->curl, CURLOPT_TIMEOUT, 20);
+    curl_easy_setopt(client->curl, CURLOPT_CONNECTTIMEOUT, 5);
 }
 //}}}
 
@@ -317,7 +331,7 @@ static CURLcode _HttpClient_Perform(HttpClient *client) {
     CURLcode ret;
     while ((ret = _HttpClient_ResetAndPerform(client)) != CURLE_OK) {
 
-        //调用失败重置函数
+        /* 调用失败重置函数 */
         reset_func = client->fail_reset_callback;
         if (reset_func != NULL) {
             reset_func(client->fail_reset_context);

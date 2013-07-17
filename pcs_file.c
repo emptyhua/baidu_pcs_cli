@@ -86,27 +86,6 @@ void PCSFileList_Free(PCSFileList *list) {
 }
 //}}}
 
-static PCSFileList *PCSFileList_Reverse(PCSFileList *list) {
-//{{{
-    PCSFile *head = list->first;
-    if (head == NULL || head->next == NULL) return list;
-    PCSFile *p;  
-    PCSFile *q;  
-    PCSFile *r;  
-    p = head;    
-    q = head->next;  
-    head->next = NULL;  
-    while(q){  
-        r = q->next;
-        q->next = p;      
-        p = q;
-        q = r;
-    } 
-    list->first= p;
-    return list;
-}
-//}}}
-
 void PCSFileList_Prepend(PCSFileList *list, PCSFile *file) {
 //{{{
     file->next = list->first;
@@ -145,12 +124,11 @@ PCSFile *BaiduPCS_NewLocalFile(BaiduPCS *api, const char *path) {
     PCSFile *file   = NULL;
     FILE *fp        = NULL;
    
-    api->error[0] = '\0'; 
-    
+    BaiduPCS_ResetError(api); 
     
     //文件不存在
     if (lstat(path, &(api->file_st)) == -1) {
-        sprintf(api->error, "%s dons't exsit", path);
+        BaiduPCS_ThrowError(api, "%s dons't exsit", path);
         goto free;
     }
     
@@ -173,7 +151,7 @@ PCSFile *BaiduPCS_NewLocalFile(BaiduPCS *api, const char *path) {
 
         fp = fopen(path, "rb");
         if (fp == NULL) {
-            sprintf(api->error, "%s is not readable", path);
+            BaiduPCS_ThrowError(api, "%s is not readable", path);
             PCSFile_Free(file);
             file = NULL;
             goto free;
@@ -181,128 +159,11 @@ PCSFile *BaiduPCS_NewLocalFile(BaiduPCS *api, const char *path) {
         fclose(fp);
 
     } else {
-        sprintf(api->error, "%s unspported file type", path);
+        BaiduPCS_ThrowError(api, "%s unspported file type", path);
     }
 
 free:
     return file;
-}
-//}}}
-
-/* 构建远程目录的文件列表 */
-PCSFileList *BaiduPCS_NewRemoteFileList(BaiduPCS *api, const char *path) {
-//{{{
-    PCSFileList *result     = NULL;
-    PCSFileList *stack      = NULL;
-    PCSFileList *list       = NULL;
-    PCSFile *c_file         = NULL;
-    PCSFile *t_file         = NULL;
-    
-    //结果列表
-    result          = PCSFileList_New();
-    //遍历栈
-    stack           = PCSFileList_New();
-
-    c_file = BaiduPCS_NewRemoteFile(api, path);
-
-    while(c_file != NULL) {
-        //如果是普通文件
-        if (!c_file->is_dir) {
-            PCSFileList_Prepend(result, c_file);
-            c_file = PCSFileList_Shift(stack);
-        //如果是目录
-        } else {
-            PCSFileList_Prepend(result, c_file);
-            list = BaiduPCS_ListRemoteDir(api, c_file->path);
-            //列出目录
-            if (list != NULL) {
-                t_file  = PCSFileList_Shift(list);
-                while(t_file != NULL) {
-                    if (t_file->is_dir) {
-                        PCSFileList_Prepend(stack, t_file);
-                    } else {
-                        PCSFileList_Prepend(result, t_file);
-                    }
-                    t_file = PCSFileList_Shift(list);
-                }
-                PCSFileList_Free(list);
-            }
-            c_file = PCSFileList_Shift(stack);
-        }
-    }
-    PCSFileList_Free(stack);
-    return PCSFileList_Reverse(result);
-}
-//}}}
-
-/* 构建本地目录的文件列表 */
-PCSFileList *BaiduPCS_NewLocalFileList(BaiduPCS *api, const char *path) {
-//{{{
-    PCSFileList *result     = NULL;
-    PCSFileList *stack      = NULL;
-    PCSFile *c_file         = NULL;
-    PCSFile *new_file       = NULL;
-    DIR *dir                = NULL;
-    struct dirent *item     = NULL;
-    char *file_path         = NULL;
-    
-    //结果列表
-    result          = PCSFileList_New();
-    //遍历栈
-    stack           = PCSFileList_New();
-    c_file          = BaiduPCS_NewLocalFile(api, path);
-
-    while(c_file != NULL) {
-        //普通文件
-        if (!c_file->is_dir && !c_file->is_link) {
-            PCSFileList_Prepend(result, c_file);
-            c_file = PCSFileList_Shift(stack);
-        //如果是目录
-        } else if (c_file->is_dir) {
-            //遍历目录
-            dir = opendir(c_file->path);  
-            //读取目录失败
-            if (dir == NULL) {
-                PCSFile_Free(c_file);
-                c_file = PCSFileList_Shift(stack);
-                continue;
-            }
-
-            while ((item = readdir(dir)) != NULL) {
-                if (strcmp(item->d_name, ".") == 0
-                    || strcmp(item->d_name, "..") == 0) {
-                    continue;
-                }
-                //构建文件完整路径
-                file_path = malloc(sizeof(char) * (strlen(c_file->path) + strlen(item->d_name) + 2));
-                file_path[0] = '\0';
-                strcat(file_path, c_file->path);
-                strcat(file_path, "/");
-                strcat(file_path, item->d_name);
-
-                new_file = BaiduPCS_NewLocalFile(api, file_path);
-                if (new_file != NULL) { 
-                    //放入栈中
-                    PCSFileList_Prepend(stack, new_file);
-                }
-
-                free(file_path);
-                file_path = NULL;
-            }
-            closedir(dir);
-
-            PCSFileList_Prepend(result, c_file);
-            c_file = PCSFileList_Shift(stack);
-        //忽略其他类型
-        } else {
-            PCSFile_Free(c_file);
-            c_file = PCSFileList_Shift(stack);
-        }
-    }
-
-    PCSFileList_Free(stack);
-
-    return PCSFileList_Reverse(result);
 }
 //}}}
 

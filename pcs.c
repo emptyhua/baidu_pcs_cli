@@ -12,7 +12,74 @@
 #include <libgen.h>
 #include "pcs.h"
 
-static void _BaiduPCS_Json2File(BaiduPCS *api, PCSFile *file, cJSON *array);
+#define MIN(a, b) ((a) > (b) ? (b) : (a))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+
+#define MAKE_JSON() \
+error = HttpClient_GetError(client); \
+if (error != NULL) { \
+    BaiduPCS_ThrowError(api, "request failed: %s", error); \
+    goto free; \
+} \
+response = HttpClient_ResponseText(client); \
+json = cJSON_Parse(response); \
+if (json == NULL) { \
+    BaiduPCS_ThrowError(api, "JSON parse error"); \
+    goto free; \
+}\
+item = cJSON_GetObjectItem(json, "error_code"); \
+if (item != NULL && item->type == cJSON_Number) { \
+    api->error_code = item->valueint; \
+    item = cJSON_GetObjectItem(json, "error_msg"); \
+    BaiduPCS_ThrowError(api, "%d-%s", api->error_code, item->valuestring); \
+    goto free; \
+} 
+
+static void _BaiduPCS_Json2File(BaiduPCS *api, PCSFile *file, cJSON *array) {
+//{{{
+    cJSON *item;
+
+    item = cJSON_GetObjectItem(array, "path");
+    if (item == NULL || item->type != cJSON_String) {
+        BaiduPCS_ThrowError(api, "json.list.path is not string");
+        goto free;
+    }
+    PCSFile_SetPath(file, item->valuestring);
+
+    //获取尺寸
+    item = cJSON_GetObjectItem(array, "size");
+    if (item == NULL || item->type != cJSON_Number) {
+        BaiduPCS_ThrowError(api, "json.list.size is not number");
+        goto free;
+    }
+    file->size = (size_t)item->valueint;
+
+    //是否为目录
+    item = cJSON_GetObjectItem(array, "isdir");
+    if (item != NULL && item->type == cJSON_Number) {
+        file->is_dir = (char)item->valueint;
+    }
+
+    //创建时间
+    item = cJSON_GetObjectItem(array, "ctime");
+    if (item == NULL || item->type != cJSON_Number) {
+        BaiduPCS_ThrowError(api, "json.list.ctime is not number");
+        goto free;
+    }
+    file->ctime = (unsigned int)item->valueint;
+    
+    //修改时间
+    item = cJSON_GetObjectItem(array, "mtime");
+    if (item == NULL || item->type != cJSON_Number) {
+        BaiduPCS_ThrowError(api, "json.list.mtime is not number");
+        goto free;
+    }
+    file->mtime = (unsigned int)item->valueint;
+
+free:;
+}
+//}}}
 
 /* 新建PCS API */
 BaiduPCS *BaiduPCS_New() {
@@ -58,7 +125,7 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
     const char *qrcode_url          = NULL;
     int interval                    = 0;
 
-    api->error[0] = '\0';
+    BaiduPCS_ResetError(api);
 
     sprintf(url_buffer, "https://openapi.baidu.com/oauth/2.0/device/code?client_id=%s"
            "&response_type=device_code"
@@ -72,7 +139,7 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
     HttpClient_Get(client, url_buffer);
     error = HttpClient_GetError(client);
     if (error != NULL) {
-        sprintf(api->error, "http request failed: %s", error);
+        BaiduPCS_ThrowError(api, "http request failed: %s", error);
         goto free;
     }
 
@@ -80,47 +147,47 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
     json = cJSON_Parse(response);
 
     if (json == NULL) {
-        sprintf(api->error, "JSON解析失败");
+        BaiduPCS_ThrowError(api, "JSON解析失败");
         goto free;
     }
     
     item = cJSON_GetObjectItem(json, "error_description");
     if (item != NULL && item->type == cJSON_String) {
-        sprintf(api->error, "%s", item->valuestring);
+        BaiduPCS_ThrowError(api, "%s", item->valuestring);
         goto free;
     }
 
     item = cJSON_GetObjectItem(json, "device_code");
     if (item == NULL || item->type != cJSON_String) {
-        sprintf(api->error, "无法获取device_code");
+        BaiduPCS_ThrowError(api, "无法获取device_code");
         goto free;
     }
     device_code = item->valuestring;
 
     item = cJSON_GetObjectItem(json, "user_code");
     if (item == NULL || item->type != cJSON_String) {
-        sprintf(api->error, "无法获取user_code");
+        BaiduPCS_ThrowError(api, "无法获取user_code");
         goto free;
     }
     user_code = item->valuestring;
 
     item = cJSON_GetObjectItem(json, "verification_url");
     if (item == NULL || item->type != cJSON_String) {
-        sprintf(api->error, "无法获取verification_url");
+        BaiduPCS_ThrowError(api, "无法获取verification_url");
         goto free;
     }
     verification_url = item->valuestring;
 
     item = cJSON_GetObjectItem(json, "qrcode_url");
     if (item == NULL || item->type != cJSON_String) {
-        sprintf(api->error, "无法获取qrcode_url");
+        BaiduPCS_ThrowError(api, "无法获取qrcode_url");
         goto free;
     }
     qrcode_url = item->valuestring;
 
     item = cJSON_GetObjectItem(json, "interval");
     if (item == NULL || item->type != cJSON_Number) {
-        sprintf(api->error, "无法获取interval");
+        BaiduPCS_ThrowError(api, "无法获取interval");
         goto free;
     }
     interval = item->valueint;
@@ -154,14 +221,14 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
         HttpClient_Get(client, url_buffer);
         error = HttpClient_GetError(client);
         if (error != NULL) {
-            sprintf(api->error, "http request failed: %s", error);
+            BaiduPCS_ThrowError(api, "http request failed: %s", error);
             goto free;
         }
 
         response = HttpClient_ResponseText(client);
         json2 = cJSON_Parse(response);
         if (json2 == NULL) {
-            sprintf(api->error, "JSON解析失败");
+            BaiduPCS_ThrowError(api, "JSON解析失败");
             goto free;
         }
         
@@ -172,7 +239,7 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
                 json2 = NULL;
                 continue;
             } else {
-                sprintf(api->error, "%s", item->valuestring);
+                BaiduPCS_ThrowError(api, "%s", item->valuestring);
                 cJSON_Delete(json2);
                 json2 = NULL;
                 goto free;
@@ -214,7 +281,7 @@ void BaiduPCS_Info(BaiduPCS *api, BaiduPCSInfo *info) {
     cJSON *json             = NULL; //需要释放
     cJSON *item             = NULL;
 
-    api->error[0] = '\0';
+    BaiduPCS_ResetError(api); 
 
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/quota?"
            "access_token=%s"
@@ -223,33 +290,11 @@ void BaiduPCS_Info(BaiduPCS *api, BaiduPCSInfo *info) {
     HttpClient_Init(client);
     HttpClient_Get(client, url_buffer);
 
-    error = HttpClient_GetError(client);
-    if (error != NULL) {
-        sprintf(api->error, "http request failed: %s", error);
-        goto free;
-    }
-
-    response = HttpClient_ResponseText(client);
-
-#ifdef DEBUG
-    fprintf(stderr, "response\n%s\n", response);
-#endif
-
-    json = cJSON_Parse(response);
-    if (json == NULL) {
-        sprintf(api->error, "JSON parse error");
-        goto free;
-    }
-    
-    item = cJSON_GetObjectItem(json, "error_msg");
-    if (item != NULL && item->type == cJSON_String) {
-        sprintf(api->error, "%s", item->valuestring);
-        goto free;
-    }
+    MAKE_JSON();
 
     item = cJSON_GetObjectItem(json, "quota");
     if (item == NULL || item->type != cJSON_Number) {
-        sprintf(api->error, "can't find json.quota");
+        BaiduPCS_ThrowError(api, "can't find json.quota");
         goto free;
     }
 
@@ -257,7 +302,7 @@ void BaiduPCS_Info(BaiduPCS *api, BaiduPCSInfo *info) {
 
     item = cJSON_GetObjectItem(json, "used");
     if (item == NULL || item->type != cJSON_Number) {
-        sprintf(api->error, "can't find json.used");
+        BaiduPCS_ThrowError(api, "can't find json.used");
         goto free;
     }
 
@@ -353,6 +398,7 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
     FILE *fp            = NULL;
     PCSFileBlock *block = NULL;
     int i               = 0;
+    int timeout         = 0;
 
     const char *error   = NULL;
     char *tmp           = NULL;
@@ -371,10 +417,10 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
     /* 最小分片 10M */
     size_t min_split_size = 10 * 1024 * 1024;
 
-    api->error[0] = '\0';
+    BaiduPCS_ResetError(api); 
 
     if (local_file == NULL) {
-        sprintf(api->error, "请指定本地文件");
+        BaiduPCS_ThrowError(api, "请指定本地文件");
         goto free;
     }
 
@@ -400,7 +446,7 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
 
     fp = fopen(local_file->path, "rb");
     if (fp == NULL) {
-        sprintf(api->error, "本地文件无法读取 %s", local_file->path);
+        BaiduPCS_ThrowError(api, "本地文件无法读取 %s", local_file->path);
         goto free;
     }
 
@@ -424,42 +470,19 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
                      CURLFORM_END);
 
         curl_easy_setopt(client->curl, CURLOPT_READFUNCTION, _BaiduPCS_UploadReadCallback);
-        //失败重试前，重置block
+        /* 失败重试前，重置block */
         HttpClient_SetFailRetryCallback(client, _BaiduPCS_UploadResetCallback, block);
-
-#ifdef DEBUG
-        //HttpClient_SetDebug(client, 1);
-#endif 
+        /* 设置一个较为合理的超时时间 */
+        timeout = MAX(20, block->size / (10 * 1024));
+        curl_easy_setopt(client->curl, CURLOPT_TIMEOUT, timeout);
 
         HttpClient_PostHttpData(client, url_buffer, post);
 
-        error = HttpClient_GetError(client);
-        if (error != NULL) {
-            sprintf(api->error, "http request failed: %s", error);
-            goto free;
-        }
-
-        response = HttpClient_ResponseText(client);
-
-#ifdef DEBUG
-        fprintf(stderr, "response %s\n", response);
-#endif
-
-        json = cJSON_Parse(response);
-        if (json == NULL) {
-            sprintf(api->error, "JSON parse error");
-            goto free;
-        }
-        
-        item = cJSON_GetObjectItem(json, "error_msg");
-        if (item != NULL && item->type == cJSON_String) {
-            sprintf(api->error, "%s", item->valuestring);
-            goto free;
-        }
+        MAKE_JSON();
 
         item = cJSON_GetObjectItem(json, "md5");
         if (item == NULL || item->type != cJSON_String) {
-            sprintf(api->error, "can't find json.md5");
+            BaiduPCS_ThrowError(api, "can't find json.md5");
             goto free;
         }
 
@@ -523,31 +546,9 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
     HttpClient_Init(client);
     HttpClient_PostHttpData(client, url_buffer, post);
 
-    error = HttpClient_GetError(client);
-    if (error != NULL) {
-        sprintf(api->error, "http request failed: %s", error);
-        goto free;
-    }
+    MAKE_JSON();
 
-    response = HttpClient_ResponseText(client);
-
-#ifdef DEBUG
-        fprintf(stderr, "response %s\n", response);
-#endif
-
-    json = cJSON_Parse(response);
-    if (json == NULL) {
-        sprintf(api->error, "JSON parse error");
-        goto free;
-    }
-    
-    item = cJSON_GetObjectItem(json, "error_msg");
-    if (item != NULL && item->type == cJSON_String) {
-        sprintf(api->error, "%s", item->valuestring);
-        goto free;
-    }
-
-    result = PCSFile_New();
+     result = PCSFile_New();
     _BaiduPCS_Json2File(api, result, json);
 
     if (api->error[0] != '\0') {
@@ -592,7 +593,7 @@ void BaiduPCS_Download(BaiduPCS *api, const char *remote_file, FILE *local_fp) {
     const char *error           = NULL;
     char *remote_path_encode    = NULL;
 
-    api->error[0] = '\0';
+    BaiduPCS_ResetError(api); 
 
     remote_path_encode = curl_easy_escape(client->curl, remote_file, 0);
     sprintf(url_buffer, "https://d.pcs.baidu.com/rest/2.0/pcs/file?"
@@ -616,7 +617,7 @@ void BaiduPCS_Download(BaiduPCS *api, const char *remote_file, FILE *local_fp) {
 
     error = HttpClient_GetError(client);
     if (error != NULL) {
-        sprintf(api->error, "http request failed: %s", error);
+        BaiduPCS_ThrowError(api, "http request failed: %s", error);
     }
 }
 //}}}
@@ -634,7 +635,7 @@ void BaiduPCS_Move(BaiduPCS *api, const char *remote_from, const char * remote_t
     char *from_encode       = NULL;
     char *to_encode         = NULL;
 
-    api->error[0] = '\0';
+    BaiduPCS_ResetError(api); 
 
     from_encode = curl_easy_escape(client->curl, remote_from, 0);
     to_encode   = curl_easy_escape(client->curl, remote_to, 0);
@@ -657,28 +658,7 @@ void BaiduPCS_Move(BaiduPCS *api, const char *remote_from, const char * remote_t
     HttpClient_Init(client);
     HttpClient_PostHttpData(client, url_buffer, NULL);
 
-    error = HttpClient_GetError(client);
-    if (error != NULL) {
-        sprintf(api->error, "http request failed: %s", error);
-        goto free;
-    }
-
-    response = HttpClient_ResponseText(client);
-
-#ifdef DEBUG
-    fprintf(stderr, "response\n%s\n", response);
-#endif
-
-    json = cJSON_Parse(response);
-    if (json == NULL) {
-        sprintf(api->error, "JSON parse error");
-        goto free;
-    }
-    
-    item = cJSON_GetObjectItem(json, "error_msg");
-    if (item != NULL && item->type == cJSON_String) {
-        sprintf(api->error, "%s", item->valuestring);
-    }
+    MAKE_JSON();
 
 free:
     if (json != NULL) {
@@ -700,7 +680,7 @@ void BaiduPCS_Copy(BaiduPCS *api, const char *remote_from, const char * remote_t
     char *from_encode       = NULL;
     char *to_encode         = NULL;
 
-    api->error[0] = '\0';
+    BaiduPCS_ResetError(api); 
 
     from_encode = curl_easy_escape(client->curl, remote_from, 0);
     to_encode   = curl_easy_escape(client->curl, remote_to, 0);
@@ -721,28 +701,7 @@ void BaiduPCS_Copy(BaiduPCS *api, const char *remote_from, const char * remote_t
     HttpClient_Init(client);
     HttpClient_PostHttpData(client, url_buffer, NULL);
 
-    error = HttpClient_GetError(client);
-    if (error != NULL) {
-        sprintf(api->error, "http request failed: %s", error);
-        goto free;
-    }
-
-    response = HttpClient_ResponseText(client);
-
-#ifdef DEBUG
-    fprintf(stderr, "response\n%s\n", response);
-#endif
-
-    json = cJSON_Parse(response);
-    if (json == NULL) {
-        sprintf(api->error, "JSON parse error");
-        goto free;
-    }
-    
-    item = cJSON_GetObjectItem(json, "error_msg");
-    if (item != NULL && item->type == cJSON_String) {
-        sprintf(api->error, "%s", item->valuestring);
-    }
+    MAKE_JSON();
 
 free:
     if (json != NULL) {
@@ -763,7 +722,7 @@ void BaiduPCS_Remove(BaiduPCS *api, const char *remote_file) {
     cJSON *item             = NULL;
     char *path_encode       = NULL;
 
-    api->error[0] = '\0';
+    BaiduPCS_ResetError(api); 
 
     path_encode = curl_easy_escape(client->curl, remote_file, 0);
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/file?"
@@ -780,78 +739,12 @@ void BaiduPCS_Remove(BaiduPCS *api, const char *remote_file) {
     HttpClient_Init(client);
     HttpClient_PostHttpData(client, url_buffer, NULL);
 
-    error = HttpClient_GetError(client);
-    if (error != NULL) {
-        sprintf(api->error, "http request failed: %s", error);
-        goto free;
-    }
-
-    response = HttpClient_ResponseText(client);
-
-#ifdef DEBUG
-    fprintf(stderr, "response\n%s\n", response);
-#endif
-
-    json = cJSON_Parse(response);
-    if (json == NULL) {
-        sprintf(api->error, "JSON parse error");
-        goto free;
-    }
-    
-    item = cJSON_GetObjectItem(json, "error_msg");
-    if (item != NULL && item->type == cJSON_String) {
-        sprintf(api->error, "%s", item->valuestring);
-    }
+    MAKE_JSON();
 
 free:
     if (json != NULL) {
         cJSON_Delete(json);
     }
-}
-//}}}
-
-static void _BaiduPCS_Json2File(BaiduPCS *api, PCSFile *file, cJSON *array) {
-//{{{
-    cJSON *item;
-
-    item = cJSON_GetObjectItem(array, "path");
-    if (item == NULL || item->type != cJSON_String) {
-        sprintf(api->error, "json.list.path is not string");
-        goto free;
-    }
-    PCSFile_SetPath(file, item->valuestring);
-
-    //获取尺寸
-    item = cJSON_GetObjectItem(array, "size");
-    if (item == NULL || item->type != cJSON_Number) {
-        sprintf(api->error, "json.list.size is not number");
-        goto free;
-    }
-    file->size = (size_t)item->valueint;
-
-    //是否为目录
-    item = cJSON_GetObjectItem(array, "isdir");
-    if (item != NULL && item->type == cJSON_Number) {
-        file->is_dir = (char)item->valueint;
-    }
-
-    //创建时间
-    item = cJSON_GetObjectItem(array, "ctime");
-    if (item == NULL || item->type != cJSON_Number) {
-        sprintf(api->error, "json.list.ctime is not number");
-        goto free;
-    }
-    file->ctime = (unsigned int)item->valueint;
-    
-    //修改时间
-    item = cJSON_GetObjectItem(array, "mtime");
-    if (item == NULL || item->type != cJSON_Number) {
-        sprintf(api->error, "json.list.mtime is not number");
-        goto free;
-    }
-    file->mtime = (unsigned int)item->valueint;
-
-free:;
 }
 //}}}
 
@@ -868,8 +761,9 @@ PCSFile *BaiduPCS_NewRemoteFile(BaiduPCS *api, const char *path) {
     cJSON *array            = NULL;
     cJSON *item             = NULL;
 
+    BaiduPCS_ResetError(api); 
+
     file          = PCSFile_New();    
-    api->error[0] = '\0';
 
     path_encode = curl_easy_escape(client->curl, path, 0);
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/file?"
@@ -885,45 +779,24 @@ PCSFile *BaiduPCS_NewRemoteFile(BaiduPCS *api, const char *path) {
 
     HttpClient_Init(client);
     HttpClient_Get(client, url_buffer);
-    error = HttpClient_GetError(client);
-    if (error != NULL) {
-        sprintf(api->error, "http request failed: %s", error);
-        goto free;
-    }
 
-    response = HttpClient_ResponseText(client);
-
-#ifdef DEBUG
-    fprintf(stderr, "response\n%s\n", response);
-#endif
-
-    json = cJSON_Parse(response);
-    if (json == NULL) {
-        sprintf(api->error, "JSON parse error");
-        goto free;
-    }
-    
-    item = cJSON_GetObjectItem(json, "error_msg");
-    if (item != NULL && item->type == cJSON_String) {
-        sprintf(api->error, "%s", item->valuestring);
-        goto free;
-    }
+    MAKE_JSON();
 
     item = cJSON_GetObjectItem(json, "list");
     if (item == NULL || item->type != cJSON_Array) {
-        sprintf(api->error, "can't find json.list");
+        BaiduPCS_ThrowError(api, "can't find json.list");
         goto free;
     }
 
     array = item;
     if (cJSON_GetArraySize(array) == 0) {
-        sprintf(api->error, "json.list is blank");
+        BaiduPCS_ThrowError(api, "json.list is blank");
         goto free;
     }
     
     item = cJSON_GetArrayItem(array, 0);
     if (item == NULL || item->type != cJSON_Object) {
-        sprintf(api->error, "json.list.item is not object");
+        BaiduPCS_ThrowError(api, "json.list.item is not object");
         goto free;
     }
     
@@ -962,8 +835,9 @@ PCSFileList *BaiduPCS_ListRemoteDir(BaiduPCS *api, const char *path) {
     int i                   = 0;
     int length              = 0;
 
+    BaiduPCS_ResetError(api); 
+
     list          = PCSFileList_New();
-    api->error[0] = '\0';
 
     path_encode = curl_easy_escape(client->curl, path, 0);
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/file?"
@@ -978,33 +852,12 @@ PCSFileList *BaiduPCS_ListRemoteDir(BaiduPCS *api, const char *path) {
 
     HttpClient_Init(client);
     HttpClient_Get(client, url_buffer);
-    error = HttpClient_GetError(client);
-    if (error != NULL) {
-        sprintf(api->error, "http request failed: %s", error);
-        goto free;
-    }
 
-    response = HttpClient_ResponseText(client);
-
-#ifdef DEBUG
-    fprintf(stderr, "response\n%s\n", response);
-#endif
-
-    json = cJSON_Parse(response);
-    if (json == NULL) {
-        sprintf(api->error, "JSON parse error");
-        goto free;
-    }
-    
-    item = cJSON_GetObjectItem(json, "error_msg");
-    if (item != NULL && item->type == cJSON_String) {
-        sprintf(api->error, "%s", item->valuestring);
-        goto free;
-    }
+    MAKE_JSON();
 
     item = cJSON_GetObjectItem(json, "list");
     if (item == NULL || item->type != cJSON_Array) {
-        sprintf(api->error, "can't find json.list");
+        BaiduPCS_ThrowError(api, "can't find json.list");
         goto free;
     }
 
@@ -1014,7 +867,7 @@ PCSFileList *BaiduPCS_ListRemoteDir(BaiduPCS *api, const char *path) {
     for (i = 0; i < length; i ++) {
         item = cJSON_GetArrayItem(array, i);
         if (item == NULL || item->type != cJSON_Object) {
-            sprintf(api->error, "json.list.item is not object");
+            BaiduPCS_ThrowError(api, "json.list.item is not object");
             goto free;
         }
 
