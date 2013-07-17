@@ -111,7 +111,7 @@ HttpBuffer* HttpBuffer_New() {
 //}}}
 
 /* 向buffer追加字符串 */
-void HttpBuffer_Append(HttpBuffer* buffer, const char *input, size_t size) {
+void HttpBuffer_Append(HttpBuffer *buffer, const char *input, size_t size) {
 //{{{
     if (!size) return;
     while (buffer->next != NULL && buffer->used !=0) buffer = buffer->next;
@@ -152,7 +152,7 @@ void HttpBuffer_Append(HttpBuffer* buffer, const char *input, size_t size) {
 //}}}
 
 /* 获取buffer长度 */
-size_t HttpBuffer_Length(HttpBuffer* buffer) {
+size_t HttpBuffer_Length(HttpBuffer *buffer) {
 //{{{
     size_t total = 0;
     while (buffer != NULL && buffer->used != 0) {
@@ -164,7 +164,7 @@ size_t HttpBuffer_Length(HttpBuffer* buffer) {
 //}}}
 
 /* 转换为char字符串 */
-size_t HttpBuffer_ToChar(HttpBuffer* buffer, char *content) {
+size_t HttpBuffer_ToChar(HttpBuffer *buffer, char *content) {
 //{{{
     size_t total = 0;
     while (buffer != NULL && buffer->used != 0) {
@@ -177,7 +177,7 @@ size_t HttpBuffer_ToChar(HttpBuffer* buffer, char *content) {
 //}}}
 
 /* 打印buffer */
-void HttpBuffer_Dump(HttpBuffer* buffer) {
+void HttpBuffer_Dump(HttpBuffer *buffer) {
 //{{{
     int id = 0;
     while (buffer != NULL) {
@@ -193,7 +193,7 @@ void HttpBuffer_Dump(HttpBuffer* buffer) {
 //}}}
 
 /* 清空buffer,但是不释放已申请的内存 */
-void HttpBuffer_Empty(HttpBuffer* buffer) {
+void HttpBuffer_Empty(HttpBuffer *buffer) {
 //{{{
     while (buffer != NULL) {
         buffer->used = 0;
@@ -203,7 +203,7 @@ void HttpBuffer_Empty(HttpBuffer* buffer) {
 //}}}
 
 /* 释放buffer */
-void HttpBuffer_Free(HttpBuffer* buffer) {
+void HttpBuffer_Free(HttpBuffer *buffer) {
 //{{{
     while (buffer != NULL) {
         if (buffer->content != NULL) {
@@ -248,7 +248,7 @@ HttpClient* HttpClient_New() {
 
 
 /* 释放HttpClient */
-void HttpClient_Free(HttpClient* client) {
+void HttpClient_Free(HttpClient *client) {
 //{{{
     HttpBuffer_Free(client->responseText);
     HttpBuffer_Free(client->responseHeader);

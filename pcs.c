@@ -383,6 +383,7 @@ PCSFile *local_file,
 const char *remote_file,
 const char *ondup
 ) {
+//{{{
     PCSFile *result     = NULL;
     HttpClient *client  = api->client;
     char *url_buffer    = api->util_buffer0;
@@ -536,6 +537,7 @@ free:
 
     return result;
 }
+//}}}
 
 static PCSFile *_BaiduPCS_UploadSmallFile(
 BaiduPCS *api,
@@ -543,6 +545,7 @@ PCSFile *local_file,
 const char *remote_file,
 const char *ondup
 ) {
+//{{{
     PCSFile *result     = NULL;
     HttpClient *client  = api->client;
     char *url_buffer    = api->util_buffer0;
@@ -610,6 +613,7 @@ free:
     }
     return result;
 }
+//}}}
 
 
 /* 上传单个文件 */

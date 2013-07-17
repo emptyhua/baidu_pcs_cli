@@ -38,15 +38,15 @@ typedef struct HttpClient_s {
 
 
 HttpBuffer* HttpBuffer_New();
-void   HttpBuffer_Free(HttpBuffer* buffer);
-void   HttpBuffer_Append(HttpBuffer* buffer, const char *input, size_t size); 
-size_t HttpBuffer_Length(HttpBuffer* buffer);
-void   HttpBuffer_Empty(HttpBuffer* buffer);
-size_t HttpBuffer_ToChar(HttpBuffer* buffer, char *content);
-void   HttpBuffer_Dump(HttpBuffer* buffer);
+void   HttpBuffer_Free(HttpBuffer *buffer);
+void   HttpBuffer_Append(HttpBuffer *buffer, const char *input, size_t size); 
+size_t HttpBuffer_Length(HttpBuffer *buffer);
+void   HttpBuffer_Empty(HttpBuffer *buffer);
+size_t HttpBuffer_ToChar(HttpBuffer *buffer, char *content);
+void   HttpBuffer_Dump(HttpBuffer *buffer);
 
 HttpClient* HttpClient_New();
-void HttpClient_Free(HttpClient* client);
+void HttpClient_Free(HttpClient *client);
 
 void  HttpClient_Init(HttpClient *client);
 void  HttpClient_SetFailRetryCallback(HttpClient *client, void *callback, void *context);
