@@ -696,6 +696,8 @@ void BaiduPCS_Download(BaiduPCS *api, const char *remote_file, FILE *local_fp) {
     curl_easy_setopt(client->curl, CURLOPT_WRITEDATA, local_fp);
     /* 跟随重定向 */
     curl_easy_setopt(client->curl, CURLOPT_FOLLOWLOCATION, 1);
+    /* 下载木有超时 */
+    curl_easy_setopt(client->curl, CURLOPT_TIMEOUT, 0);
     HttpClient_Get(client, url_buffer);
 
     error = HttpClient_GetError(client);
