@@ -345,13 +345,7 @@ static void local_file_split(PCSFile *file, size_t split_threshold) {
 
             offset += split_threshold;
         }
-    } else {
-        file->block_size = file->size;
-        block = PCSFileBlock_New();
-        block->offset = 0;
-        block->size = file->size;
-        file->block = block;
-    }
+    } 
 }
 //}}}
 
@@ -383,14 +377,12 @@ static void _BaiduPCS_UploadResetCallback(void *userdata) {
 }
 //}}}
 
-/* 上传单个文件 */
-PCSFile *BaiduPCS_Upload(BaiduPCS *api,
-    PCSFile *local_file,
-    const char *remote_file,
-    size_t split_threshold,
-    const char *ondup
+static PCSFile *_BaiduPCS_UploadBigFile(
+BaiduPCS *api,
+PCSFile *local_file,
+const char *remote_file,
+const char *ondup
 ) {
-//{{{
     PCSFile *result     = NULL;
     HttpClient *client  = api->client;
     char *url_buffer    = api->util_buffer0;
@@ -411,33 +403,6 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
     cJSON *json         = NULL;
     cJSON *item         = NULL;
     cJSON *array        = NULL;
-
-    /* 最大分片 2G  */
-    size_t max_split_size = 2 * 1024 * 1024 * (size_t)1024;
-    /* 最小分片 10M */
-    size_t min_split_size = 10 * 1024 * 1024;
-
-    BaiduPCS_ResetError(api); 
-
-    if (local_file == NULL) {
-        BaiduPCS_ThrowError(api, "请指定本地文件");
-        goto free;
-    }
-
-    if (split_threshold < min_split_size) {
-        split_threshold = min_split_size;
-    } else if (split_threshold > max_split_size) {
-        split_threshold = max_split_size;
-    }
-
-
-    //文件切片
-    local_file_split(local_file, split_threshold);
-
-#ifdef DEBUG
-    fprintf(stderr, "切片后的文件\n");
-    PCSFile_Dump(local_file);
-#endif
 
     sprintf(url_buffer, "https://c.pcs.baidu.com/rest/2.0/pcs/file?"
                     "access_token=%s"
@@ -570,6 +535,120 @@ free:
     }
 
     return result;
+}
+
+static PCSFile *_BaiduPCS_UploadSmallFile(
+BaiduPCS *api,
+PCSFile *local_file,
+const char *remote_file,
+const char *ondup
+) {
+    PCSFile *result     = NULL;
+    HttpClient *client  = api->client;
+    char *url_buffer    = api->util_buffer0;
+    const char *token   = api->token;
+    int timeout         = 0;
+
+    const char *error   = NULL;
+    const char *response      = NULL;
+    char *remote_path_encode  = NULL;
+
+    struct curl_httppost *post = NULL;
+    struct curl_httppost *last = NULL;
+
+    cJSON *json         = NULL;
+    cJSON *item         = NULL;
+
+    remote_path_encode = curl_easy_escape(client->curl, remote_file, 0);
+    //合并文件分片
+    sprintf(url_buffer, "https://c.pcs.baidu.com/rest/2.0/pcs/file?"
+                    "access_token=%s"
+                    "&method=upload"
+                    "&path=%s"
+                    "&ondup=%s", token, remote_path_encode, ondup);
+    curl_free(remote_path_encode);
+    remote_path_encode = NULL;
+
+#ifdef DEBUG
+    fprintf(stderr, "开始上传小文件\n");
+#endif 
+
+    HttpClient_Init(client);
+    curl_formadd(&post, &last,
+                 CURLFORM_COPYNAME, "file",
+                 CURLFORM_FILE, local_file->path,
+                 CURLFORM_END);
+
+    curl_easy_setopt(client->curl, CURLOPT_READFUNCTION, _BaiduPCS_UploadReadCallback);
+    /* 设置一个较为合理的超时时间 */
+    timeout = MAX(20, local_file->size / (10 * 1024));
+    curl_easy_setopt(client->curl, CURLOPT_TIMEOUT, timeout);
+
+    HttpClient_PostHttpData(client, url_buffer, post);
+    curl_formfree(post);
+    post = NULL;
+    last = NULL;
+
+    MAKE_JSON();
+
+
+    result = PCSFile_New();
+    _BaiduPCS_Json2File(api, result, json);
+
+    if (api->error[0] != '\0') {
+        PCSFile_Free(result);        
+        result = NULL;
+    }
+
+free:
+    if (post != NULL) {
+        curl_formfree(post);
+    }
+
+    if (json != NULL) {
+        cJSON_Delete(json);
+    }
+    return result;
+}
+
+
+/* 上传单个文件 */
+PCSFile *BaiduPCS_Upload(BaiduPCS *api,
+    PCSFile *local_file,
+    const char *remote_file,
+    size_t split_threshold,
+    const char *ondup
+) {
+//{{{
+    /* 最大分片 2G  */
+    size_t max_split_size = 2 * 1024 * 1024 * (size_t)1024;
+    /* 最小分片 10M */
+    size_t min_split_size = 10 * 1024 * 1024;
+
+    BaiduPCS_ResetError(api); 
+
+    if (local_file == NULL) {
+        BaiduPCS_ThrowError(api, "请指定本地文件");
+        goto free;
+    }
+
+    if (split_threshold < min_split_size) {
+        split_threshold = min_split_size;
+    } else if (split_threshold > max_split_size) {
+        split_threshold = max_split_size;
+    }
+
+
+    //文件切片
+    local_file_split(local_file, split_threshold);
+
+    if (local_file->block != NULL) {
+        return _BaiduPCS_UploadBigFile(api, local_file, remote_file, ondup);
+    } else {
+        return _BaiduPCS_UploadSmallFile(api, local_file, remote_file, ondup);
+    }
+free:
+    return NULL;
 }
 //}}}
 
