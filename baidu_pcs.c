@@ -140,6 +140,7 @@ void usage() {
 "            -o 覆盖远程同名文件\n"
 "            -n 如果存在同名文件，创建以日期结尾的新文件\n"
 "\n"
+"            -p 指定上传分片大小,例如 -p100M\n"
 "            -l 跟随软链\n"
 "\n"
 "download [选项] [远程路径] [本地路径] 下载文件或目录\n"
@@ -697,18 +698,24 @@ free:
 /* 上传文件或目录 */
 int command_upload(int argc, char **argv) {
 //{{{
-    int option_overwrite    = 0; /* 覆盖同名文件        */
-    int option_new          = 0; /* 创建新文件          */
-    int option_follow_link  = 0; /* 复制链接源文件      */
-    int option_split_size   = 0; /* 分片大小            */
+    int option_overwrite        = 0; /* 覆盖同名文件        */
+    int option_new              = 0; /* 创建新文件          */
+    int option_follow_link      = 0; /* 复制链接源文件      */
+    size_t option_split_size    = 0; /* 分片大小            */
 
     int ret = 0;
+    int i   = 0;
     char c;
 
     char *split_size;
     char *remote_path;
     char *local_path;
-    
+
+    /* 最大分片 2G  */
+    size_t max_split_size = 2 * 1024 * 1024 * (size_t)1024;
+    /* 最小分片 10M */
+    size_t min_split_size = 10 * 1024 * 1024;
+
 
     opterr = 0;
     while ((c = getopt(argc, argv, "onlp:")) != -1) {
@@ -758,15 +765,46 @@ int command_upload(int argc, char **argv) {
         remote_path[strlen(remote_path) - 1] = '\0';
     }
 
-#ifdef DEBUG
-    fprintf(stderr, "Upload %s to %s\n", local_path, remote_path);
-#endif
+    /* 默认50M分片大小 */
+    if (split_size == NULL) {
+        option_split_size = 50 * 1024 * 1024;
+    } else {
+        i = strlen(split_size) - 1;
+        if (i > 0) {
+            if (split_size[i] == 'M' || split_size[i] == 'm') {
+                split_size[i] = '\0';
+                option_split_size = atof(split_size) * 1024 * 1024;
+            } else if (split_size[i] == 'G' || split_size[i] == 'g') {
+                split_size[i] = '\0';
+                option_split_size = atof(split_size) * 1024 * 1024 * 1024;
+            }
+        } else {
+            option_split_size = atol(split_size);
+        }
+
+        if (option_split_size < min_split_size) {
+            ret = 1;
+            color_log(COLOR_LOG_ERROR, "分片尺寸不能小于10M\n");
+            goto free;
+        } else if (option_split_size > max_split_size) {
+            ret = 1;
+            color_log(COLOR_LOG_ERROR, "分片尺寸不能大于2G\n");
+            goto free;
+        }
+    }
 
     if (!init_api()) {
         ret = 1;
         goto free;
     }
-    
+
+#ifdef DEBUG
+    fprintf(stderr, "Upload %s to %s\n", local_path, remote_path);
+    readable_size(option_split_size, api->util_buffer0);
+    fprintf(stderr, "分片尺寸:%s\n", api->util_buffer0);
+#endif
+
+   
     if (stat(local_path, &(api->file_st)) == -1) {
         color_log(COLOR_LOG_ERROR, "%s 不存在\n", local_path);
         ret = 1;
