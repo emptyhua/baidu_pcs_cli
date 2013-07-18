@@ -707,9 +707,9 @@ int command_upload(int argc, char **argv) {
     int i   = 0;
     char c;
 
-    char *split_size;
-    char *remote_path;
-    char *local_path;
+    char *split_size    = NULL;
+    char *remote_path   = NULL;
+    char *local_path    = NULL;
 
     /* 最大分片 2G  */
     size_t max_split_size = 2 * 1024 * 1024 * (size_t)1024;
