@@ -113,40 +113,42 @@ HttpBuffer* HttpBuffer_New() {
 /* 向buffer追加字符串 */
 void HttpBuffer_Append(HttpBuffer *buffer, const char *input, size_t size) {
 //{{{
+    int left_buffer_size;
+    int left_input_size;
+    int buffer_size; 
+    int write_size;
+    HttpBuffer *newBuffer;
+
     if (!size) return;
     while (buffer->next != NULL && buffer->used !=0) buffer = buffer->next;
 
-    if (buffer->content == NULL) {
-        int buffer_size = MAX(size, DEFAULT_ALLOC_SIZE);
-        buffer->content = malloc(sizeof(char) * buffer_size);
-        buffer->size    = buffer_size;
-    }
+    left_input_size = size;
 
-    int left_buffer_size = buffer->size - buffer->used;
-    int left_input_size = size;
-    if (left_buffer_size) {
-        int write_size = MIN(size, left_buffer_size);
-        memcpy(buffer->content + buffer->used, input, sizeof(char) * write_size);
-        input += write_size;
-        left_input_size -= write_size;
-        buffer->used += write_size;
-    } 
+    while (left_input_size) {
+        if (buffer->content == NULL) {
+            buffer_size = MAX(left_input_size, DEFAULT_ALLOC_SIZE);
+            buffer->content = malloc(sizeof(char) * buffer_size);
+            buffer->size    = buffer_size;
+            buffer->used    = 0;
+        }
 
-    if (left_input_size) {
-        HttpBuffer *newBuffer;
-        if (buffer->next) {
-            newBuffer = buffer->next;
+        left_buffer_size = buffer->size - buffer->used;
+       
+        if (left_buffer_size) {
+            write_size = MIN(left_buffer_size, left_input_size);
+            memcpy(buffer->content + buffer->used, input, sizeof(char) * write_size);
+            input += write_size;
+            left_input_size -= write_size;
+            buffer->used += write_size;
         } else {
-            newBuffer = HttpBuffer_New();
-            buffer->next = newBuffer;
+            if (buffer->next) {
+                buffer = buffer->next;
+            } else {
+                newBuffer = HttpBuffer_New();
+                buffer->next = newBuffer;
+                buffer = newBuffer;
+            }
         }
-        int buffer_size = MAX(left_input_size, DEFAULT_ALLOC_SIZE);
-        if (newBuffer->content == NULL) {
-            newBuffer->content = malloc(sizeof(char) * buffer_size);
-            newBuffer->size    = buffer_size;
-        }
-        memcpy(newBuffer->content, input, sizeof(char) * left_input_size);
-        newBuffer->used = left_input_size;
     }
 }
 //}}}
