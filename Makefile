@@ -5,7 +5,7 @@ INSTALL_BIN= $(PREFIX)/bin
 all:baidu_pcs
 
 baidu_pcs:
-	gcc $(CFLAGS) -Wall -O2 -lcurl -lm baidu_pcs.c pcs.c pcs_file.c cJSON.c http_client.c -o ./baidu_pcs
+	gcc $(CFLAGS) -Wall -O2 baidu_pcs.c pcs.c pcs_file.c cJSON.c http_client.c -o ./baidu_pcs -lcurl -lm
 
 install:baidu_pcs
 	mkdir -p $(INSTALL_BIN)
