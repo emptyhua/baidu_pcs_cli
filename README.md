@@ -1,5 +1,7 @@
 #说明
 命令行工具基于libcurl+ [百度PCS的rest API](http://developer.baidu.com/wiki/index.php?title=docs/pcs/rest/file_data_apis_list) ，适用于linux,Mac OS
+#依赖
+libcurl >= 7.18, centos/redhat 5自带curl版本较低，编译前请升级
 #安装
 编译前请修改`baidu_pcs.c`中的两个全局变量为自己的API Key和Secret Key
 ~~~
