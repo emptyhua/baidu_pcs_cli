@@ -47,6 +47,7 @@ mv       [远程路径] [目的远程路径] 移动远程文件或目录
 rm       [远程路径] 删除远程文件或目录
 ~~~
 #你可能需要知道
+1. pcs api只能操作/apps/xxx下的文件
 1. 默认文件分片尺寸为50M
 2. 下载可以输出到标准输出`baidu_pcs down /apps/xxx/test.mp4 - | mplayer -cache 8192 -`
 2. API使用https协议，curl初始化时设置了速度较快的rc4加密方式
