@@ -14,13 +14,13 @@
 typedef struct PCSFileBlock_s PCSFileBlock;
 
 struct PCSFileBlock_s {
-    size_t offset;      /*文件偏移量            */
-    size_t size;        /*切片尺寸              */
+    uint64_t offset;      /*文件偏移量            */
+    uint64_t size;        /*切片尺寸              */
     char md5[33];       /*文件MD5               */
     PCSFileBlock *next; /*链表用                */
 
     FILE *fp;           /*上传文件时用的读句柄  */
-    size_t readed_size; /*上传读取偏移量        */
+    uint64_t readed_size; /*上传读取偏移量        */
 };
 
 /* 文件对象 */
@@ -31,11 +31,11 @@ struct PCSFile_s {
     char md5[33];           /*文件MD5               */
     char is_link;           /*是否为链接            */
     char is_dir;            /*是否为目录            */
-    size_t size;            /*文件大小              */
+    uint64_t size;            /*文件大小              */
     unsigned int ctime;     /*创建时间              */
     unsigned int mtime;     /*修改时间              */
 
-    size_t block_size;      /*分片大小              */
+    uint64_t block_size;      /*分片大小              */
     PCSFileBlock *block;    /*文件切片              */
 
     PCSFile *next;          /*链表用                */
@@ -48,8 +48,8 @@ typedef struct PCSFileList_s {
 
 /* 空间信息 */
 typedef struct BaiduPCSInfo_s {
-    size_t quota;
-    size_t used;
+    uint64_t quota;
+    uint64_t used;
 } BaiduPCSInfo;
 
 /* API 对象 */
@@ -78,7 +78,7 @@ const char *BaiduPCS_Auth(BaiduPCS *api);
 /* 获取空间信息 */
 void BaiduPCS_Info(BaiduPCS *api, BaiduPCSInfo *info); 
 /* 上传单个文件 */
-PCSFile *BaiduPCS_Upload(BaiduPCS *api, PCSFile *local_file, const char *remote_file, size_t split_threshold, const char *ondup); 
+PCSFile *BaiduPCS_Upload(BaiduPCS *api, PCSFile *local_file, const char *remote_file, uint64_t split_threshold, const char *ondup); 
 /* 下载单个文件 */
 void BaiduPCS_Download(BaiduPCS *api, const char *remote_file, FILE *local_fp); 
 /* 移动远程文件 */

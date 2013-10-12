@@ -701,7 +701,7 @@ int command_upload(int argc, char **argv) {
     int option_overwrite        = 0; /* 覆盖同名文件        */
     int option_new              = 0; /* 创建新文件          */
     int option_follow_link      = 0; /* 复制链接源文件      */
-    size_t option_split_size    = 0; /* 分片大小            */
+    uint64_t option_split_size    = 0; /* 分片大小            */
 
     int ret = 0;
     int i   = 0;
@@ -712,9 +712,9 @@ int command_upload(int argc, char **argv) {
     char *local_path    = NULL;
 
     /* 最大分片 2G  */
-    size_t max_split_size = 2 * 1024 * 1024 * (size_t)1024;
+    uint64_t max_split_size = 2 * 1024 * 1024 * (uint64_t)1024;
     /* 最小分片 10M */
-    size_t min_split_size = 10 * 1024 * 1024;
+    uint64_t min_split_size = 10 * 1024 * 1024;
 
 
     opterr = 0;

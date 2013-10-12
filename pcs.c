@@ -53,7 +53,7 @@ static void _BaiduPCS_Json2File(BaiduPCS *api, PCSFile *file, cJSON *array) {
         BaiduPCS_ThrowError(api, "json.list.size is not number");
         goto free;
     }
-    file->size = (size_t)item->valueint;
+    file->size = (uint64_t)item->valueint;
 
     //是否为目录
     item = cJSON_GetObjectItem(array, "isdir");
@@ -298,7 +298,7 @@ void BaiduPCS_Info(BaiduPCS *api, BaiduPCSInfo *info) {
         goto free;
     }
 
-    info->quota = (size_t)item->valueint;
+    info->quota = (uint64_t)item->valueint;
 
     item = cJSON_GetObjectItem(json, "used");
     if (item == NULL || item->type != cJSON_Number) {
@@ -306,7 +306,7 @@ void BaiduPCS_Info(BaiduPCS *api, BaiduPCSInfo *info) {
         goto free;
     }
 
-    info->used = (size_t)item->valueint;
+    info->used = (uint64_t)item->valueint;
 free:
     if (json != NULL) {
         cJSON_Delete(json);
@@ -315,9 +315,9 @@ free:
 //}}}
 
 //本地文件分片
-static void local_file_split(PCSFile *file, size_t split_threshold) {
+static void local_file_split(PCSFile *file, uint64_t split_threshold) {
 //{{{
-    size_t offset               = 0;
+    uint64_t offset               = 0;
     PCSFileBlock *last_block    = NULL;
     PCSFileBlock *block         = NULL;
 
@@ -620,14 +620,14 @@ free:
 PCSFile *BaiduPCS_Upload(BaiduPCS *api,
     PCSFile *local_file,
     const char *remote_file,
-    size_t split_threshold,
+    uint64_t split_threshold,
     const char *ondup
 ) {
 //{{{
     /* 最大分片 2G  */
-    size_t max_split_size = 2 * 1024 * 1024 * (size_t)1024;
+    uint64_t max_split_size = 2 * 1024 * 1024 * (uint64_t)1024;
     /* 最小分片 10M */
-    size_t min_split_size = 10 * 1024 * 1024;
+    uint64_t min_split_size = 10 * 1024 * 1024;
 
     BaiduPCS_ResetError(api); 
 
