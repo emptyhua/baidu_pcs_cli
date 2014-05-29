@@ -10,6 +10,7 @@
 #include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <errno.h>
 #include <pwd.h>
 #include <time.h>
 #include <dirent.h>
@@ -189,7 +190,7 @@ int init_api() {
                 buf[i] = '\0';
             }
         }
-        snprintf(api->token, 1024, "%s", buf);
+        snprintf(api->token, PCS_TOKEN_SIZE, "%s", buf);
 #ifdef DEBUG
         fprintf(stderr, "已存token: %s\n", api->token);
 #endif
@@ -647,7 +648,9 @@ int split_size              /* 分片大小 */
         /* 软链接 */
         } else if (c_file->is_link) { 
             if (follow_link) {
-                realpath(c_file->path, t_path);
+                if(realpath(c_file->path, t_path) == NULL) {
+                    fprintf(stderr, "get realpath err: %s\n", strerror(errno));
+                };
 #ifdef DEBUG
                 fprintf(stderr, "跟随软链 %s -> %s\n", c_file->path, t_path);
 #endif
