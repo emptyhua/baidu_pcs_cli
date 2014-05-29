@@ -12,6 +12,10 @@
 #include "http_client.h"
 #include "cJSON.h"
 
+#define PCS_TOKEN_SIZE      1024
+#define PCS_KEY_SIZE        1024
+#define PCS_SECRET_SIZE     1024
+
 /* 文件切片 */
 typedef struct PCSFileBlock_s PCSFileBlock;
 
@@ -56,12 +60,12 @@ typedef struct BaiduPCSInfo_s {
 
 /* API 对象 */
 typedef struct BaiduPCS_s {
-    HttpClient *client;         /*Curl          */
-    char token[1024];           /*api_token     */
-    char key[1024];             /*api_key       */
-    char secret[1024];          /*api_secret    */
-    char error[4096];           /*错误信息      */
-    int error_code;             /*错误码        */
+    HttpClient *client;             /*Curl          */
+    char token[PCS_TOKEN_SIZE];     /*api_token     */
+    char key[PCS_KEY_SIZE];         /*api_key       */
+    char secret[PCS_SECRET_SIZE];   /*api_secret    */
+    char error[4096];               /*错误信息      */
+    int error_code;                 /*错误码        */
 
     char util_buffer0[4096];
     char util_buffer1[4096];

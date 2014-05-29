@@ -189,7 +189,7 @@ int init_api() {
                 buf[i] = '\0';
             }
         }
-        snprintf(api->token, 1024, "%s", buf);
+        snprintf(api->token, PCS_TOKEN_SIZE, "%s", buf);
 #ifdef DEBUG
         fprintf(stderr, "已存token: %s\n", api->token);
 #endif
