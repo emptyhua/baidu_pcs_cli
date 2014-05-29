@@ -5,10 +5,12 @@
 #ifndef _BAIDU_PCS_H
 #define _BAIDU_PCS_H
 
-#include "http_client.h"
-#include "cJSON.h"
+#include <stdint.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#include "http_client.h"
+#include "cJSON.h"
 
 /* 文件切片 */
 typedef struct PCSFileBlock_s PCSFileBlock;
