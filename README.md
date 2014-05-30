@@ -16,7 +16,7 @@ make install #这一步可以省略咯，就一个可行行文件，可以自己
 
 也可以拷贝一份到 ~/.baidu_pcs.ini
 
-配置文件搜寻路径为:
+默认配置文件搜寻路径为:
 
     ~/.baidu_pcs.ini
     ./etc/baidu_pcs.ini
