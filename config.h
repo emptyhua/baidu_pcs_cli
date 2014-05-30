@@ -6,7 +6,6 @@
 #define _BAIDU_PCS_CONFIG_H
 
 #include <stdint.h>
-#include <errno.h>
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -28,7 +27,7 @@ static char* _PCSConfig_GetConfigFile(void) {
     int i;
     for(i = 0; i < sizeof(ini_path) / sizeof(ini_path[0]); i++){
         struct stat sts;
-        if(stat(ini_path[i], &sts) == 0 && errno != ENOENT) {
+        if(stat(ini_path[i], &sts) == 0) {
             return ini_path[i];
         }
     }
