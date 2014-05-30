@@ -8,6 +8,7 @@ libcurl >= 7.18, centos/redhat 5自带curl版本较低，编译前请升级
 ~~~
 make
 make install #这一步可以省略咯，就一个可行行文件，可以自己随便copy到哪里。。
+~~~
 
 然后
 ~~~
