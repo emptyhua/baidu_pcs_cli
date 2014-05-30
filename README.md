@@ -12,7 +12,6 @@ libcurl >= 7.18, centos/redhat 5自带curl版本较低，编译前请升级
     ~/.baidu_pcs.ini
     ./etc/baidu_pcs.ini
 
-~~~
 然后
 ~~~
 make
