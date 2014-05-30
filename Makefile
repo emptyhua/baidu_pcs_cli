@@ -13,5 +13,9 @@ install:baidu_pcs
 	cp ./etc/baidu_pcs.ini ~/.baidu_pcs.ini
 	chmod 755 $(INSTALL_BIN)/baidu_pcs
 
+uinstall:baidu_pcs
+	rm -rf $(INSTALL_BIN)/baidu_pcs
+	rm -rf ~/.baidu_pcs.ini
+
 clean:
 	rm ./baidu_pcs
