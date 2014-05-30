@@ -28,7 +28,7 @@ static char* _PCSConfig_GetConfigFile(void) {
     int i;
     for(i = 0; i < sizeof(ini_path) / sizeof(ini_path[0]); i++){
         struct stat sts;
-        if(stat(ini_path[i], &sts) == -1 && errno == ENOENT) {
+        if(stat(ini_path[i], &sts) == 0 && errno != ENOENT) {
             return ini_path[i];
         }
     }
