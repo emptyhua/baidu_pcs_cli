@@ -10,6 +10,7 @@ baidu_pcs:
 install:baidu_pcs
 	mkdir -p $(INSTALL_BIN)
 	cp ./baidu_pcs $(INSTALL_BIN)/baidu_pcs
+	cp ./etc/baidu_pcs.ini ~/.baidu_pcs.ini
 	chmod 755 $(INSTALL_BIN)/baidu_pcs
 
 clean:

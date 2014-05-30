@@ -7,14 +7,12 @@ libcurl >= 7.18, centos/redhat 5自带curl版本较低，编译前请升级
 首先
 ~~~
 make
-make install #这一步可以省略咯，就一个可行行文件，可以自己随便copy到哪里。。
+make install
 ~~~
 
 然后
 ~~~
-请在 etc/baidu_pcs.ini 中设置api_key及api_secret
-
-也可以拷贝一份到 ~/.baidu_pcs.ini
+请在 ~/.baidu_pcs.ini 中设置api_key及api_secret
 
 默认配置文件搜寻路径为:
 
