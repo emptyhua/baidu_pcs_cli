@@ -3,6 +3,14 @@
 #依赖
 libcurl >= 7.18, centos/redhat 5自带curl版本较低，编译前请升级
 #安装
+
+首先
+~~~
+make
+make install #这一步可以省略咯，就一个可行行文件，可以自己随便copy到哪里。。
+
+然后
+~~~
 请在 etc/baidu_pcs.ini 中设置api_key及api_secret
 
 也可以拷贝一份到 ~/.baidu_pcs.ini
@@ -12,11 +20,6 @@ libcurl >= 7.18, centos/redhat 5自带curl版本较低，编译前请升级
     ~/.baidu_pcs.ini
     ./etc/baidu_pcs.ini
 
-然后
-~~~
-make
-make install #这一步可以省略咯，就一个可行行文件，可以自己随便copy到哪里。。
-~~~
 #使用方法
 ~~~
 使用方法: baidu_pcs 命令 [选项]
