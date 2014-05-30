@@ -214,6 +214,7 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
 
     while(1) {
         printf("等待验证....\n");
+        printf("请访问: https://openapi.baidu.com/device  输入授权码\n");
 
         sleep(interval);
 
