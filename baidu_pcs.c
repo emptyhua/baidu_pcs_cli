@@ -18,15 +18,11 @@
 #include <stdarg.h>
 
 #include "pcs.h"
+#include "config.h"
 
 #define COLOR_LOG_OK        1
-#define COLOR_LOG_ERROR     2 
-#define COLOR_LOG_IGNORE    3 
-
-/* pcs api key */
-static const char *option_api_key     = "";
-/* pcs api secret */
-static const char *option_api_secret  = "";
+#define COLOR_LOG_ERROR     2
+#define COLOR_LOG_IGNORE    3
 
 static BaiduPCS *api = NULL;
 
@@ -103,8 +99,8 @@ void readable_size(double size, char *buf) {
 
 void print_file(PCSFile *file, int show_detail) {
 //{{{
-    char buf2[100]; 
-    char buf3[100]; 
+    char buf2[100];
+    char buf3[100];
     if (show_detail) {
         readable_timestamp(file->mtime, buf2);
         if (file->is_dir) {
@@ -112,7 +108,7 @@ void print_file(PCSFile *file, int show_detail) {
         } else {
             readable_size(file->size, buf3);
             printf("文件 %11s %s %s\n", buf3, buf2, file->path);
-        } 
+        }
     } else {
         printf("%s\n", file->path);
     }
@@ -172,9 +168,13 @@ int init_api() {
     /* 需要释放 */
     FILE *fp;
 
-    api = BaiduPCS_New();    
-    sprintf(api->key, "%s", option_api_key);
-    sprintf(api->secret, "%s", option_api_secret);
+    /* get config */
+    pcs_config_t pcs_config;
+    PCSConfig_Get(&pcs_config);
+
+    api = BaiduPCS_New();
+    sprintf(api->key, "%s", pcs_config.api_key);
+    sprintf(api->secret, "%s", pcs_config.api_secret);
 
     /* 读取已存的token */
     pw = getpwuid(getuid());
@@ -202,10 +202,10 @@ int init_api() {
 #ifdef DEBUG
         fprintf(stderr, "没有已存token %s\n", config);
 #endif
-        token = BaiduPCS_Auth(api);    
+        token = BaiduPCS_Auth(api);
         error = BaiduPCS_GetError(api);
         if (error != NULL) {
-            color_log(COLOR_LOG_ERROR, "认证失败 %s\n", error);        
+            color_log(COLOR_LOG_ERROR, "认证失败 %s\n", error);
             ret = 0;
         } else {
             fp = fopen(config, "wb");
@@ -216,7 +216,7 @@ int init_api() {
                 /* 确保只有自己读写 */
                 chmod(config, 0600);
             } else {
-                color_log(COLOR_LOG_ERROR, "%s 无法写入\n", config);        
+                color_log(COLOR_LOG_ERROR, "%s 无法写入\n", config);
                 ret = 0;
             }
         }
@@ -290,7 +290,7 @@ int do_normal_ls(const char *remote_path, int option_show_detail) {
 
 free:
     if (file != NULL) {
-        PCSFile_Free(file); 
+        PCSFile_Free(file);
     }
 
     if (list != NULL) {
@@ -310,7 +310,7 @@ int do_recursion_ls(const char *remote_path, int option_show_detail) {
     PCSFile *c_file         = NULL;
     PCSFile *t_file         = NULL;
     const char *error       = NULL;
-    
+
     /* 遍历栈 */
     stack = PCSFileList_New();
 
@@ -386,24 +386,24 @@ int command_ls(int argc, char **argv) {
                 break;
         }
     }
- 
+
     if (optind < argc - 1) {
         color_log(COLOR_LOG_ERROR, "请指定路径\n");
         usage();
         ret = 1;
         goto free;
     }
-    
+
     remote_path = argv[argc - 1];
 #ifdef DEBUG
     fprintf(stderr, "ls %s\n", remote_path);
 #endif
-    
+
     if (!init_api()) {
         ret = 1;
         goto free;
     }
-    
+
     if (option_recursion) {
         ret = do_recursion_ls(remote_path, option_show_detail);
     } else {
@@ -416,12 +416,12 @@ free:
 //}}}
 
 int do_upload(const char *local_path,
-const char *remote_path,  
-int overwrite,              /* 是否覆盖 */ 
-int create_new,             /* 是否新建 */ 
+const char *remote_path,
+int overwrite,              /* 是否覆盖 */
+int create_new,             /* 是否新建 */
 int follow_link,            /* 跟随软链 */
 int split_size              /* 分片大小 */
-) { 
+) {
 //{{{
     int ret                 = 0;
     int is_first            = 1;
@@ -440,7 +440,7 @@ int split_size              /* 分片大小 */
     PCSFile *remote_file    = NULL;
     PCSFileList *r_list     = NULL;
     DIR *dir                = NULL;
-    
+
     /* 遍历栈 */
     stack           = PCSFileList_New();
     c_file          = BaiduPCS_NewLocalFile(api, local_path);
@@ -454,7 +454,7 @@ int split_size              /* 分片大小 */
 
     /* 当前要上传的远程路径 */
     c_file->userdata = strdup(remote_path);
-    
+
     if (create_new) {
         ondup = "newcopy";
     } else {
@@ -467,9 +467,9 @@ int split_size              /* 分片大小 */
         if (!c_file->is_dir && !c_file->is_link) {
 
             if (is_first) {
-                remote_file = BaiduPCS_NewRemoteFile(api, remote_path); 
+                remote_file = BaiduPCS_NewRemoteFile(api, remote_path);
                 if (remote_file != NULL) {
-                    /*  upload xx.txt /apps/xx/ 
+                    /*  upload xx.txt /apps/xx/
                      *  对于这种情况,远端路径修正为/apps/xx/xx.txt
                      */
                     if (remote_file->is_dir) {
@@ -490,7 +490,7 @@ int split_size              /* 分片大小 */
                     /* upload xx.txt /apps/xx/xx.txt */
                     } else if (!overwrite && !create_new) {
                         color_log(COLOR_LOG_IGNORE, "%s -> %s 远端已存在同名文件\n", c_file->path, remote_file->path);
-                        goto free; 
+                        goto free;
                     }
                     PCSFile_Free(remote_file);
                     remote_file = NULL;
@@ -522,7 +522,7 @@ int split_size              /* 分片大小 */
         //如果是目录
         } else if (c_file->is_dir) {
             /* 遍历目录 */
-            dir = opendir(c_file->path);  
+            dir = opendir(c_file->path);
             /* 读取目录失败 */
             if (dir == NULL) {
                 color_log(COLOR_LOG_ERROR, "%s -> %s 目录读取失败\n", c_file->path, remote_path);
@@ -534,9 +534,9 @@ int split_size              /* 分片大小 */
             } else {
                 /* 进行目录修正 */
                 if (is_first) {
-                    remote_file = BaiduPCS_NewRemoteFile(api, remote_path); 
+                    remote_file = BaiduPCS_NewRemoteFile(api, remote_path);
                     if (remote_file != NULL) {
-                        /*  upload ./dir/ /apps/xx/ 
+                        /*  upload ./dir/ /apps/xx/
                          *  对于这种情况,远端路径修正为/apps/xx/dir
                          */
                         if (remote_file->is_dir) {
@@ -579,7 +579,7 @@ int split_size              /* 分片大小 */
                     PCSFile_Free(remote_file);
                     remote_file = NULL;
                 }
-                
+
                 while ((item = readdir(dir)) != NULL) {
                     if (strcmp(item->d_name, ".") == 0
                         || strcmp(item->d_name, "..") == 0) {
@@ -625,7 +625,7 @@ int split_size              /* 分片大小 */
                                 }
                             }
                         }
-                       
+
                         new_file->userdata = strdup(t_remote_path);
                         //放入栈中
                         PCSFileList_Prepend(stack, new_file);
@@ -646,7 +646,7 @@ int split_size              /* 分片大小 */
             c_file = PCSFileList_Shift(stack);
             is_first = 0;
         /* 软链接 */
-        } else if (c_file->is_link) { 
+        } else if (c_file->is_link) {
             if (follow_link) {
                 if(realpath(c_file->path, t_path) == NULL) {
                     fprintf(stderr, "get realpath err: %s\n", strerror(errno));
@@ -744,7 +744,7 @@ int command_upload(int argc, char **argv) {
                 break;
         }
     }
- 
+
     if (option_overwrite && option_new) {
         color_log(COLOR_LOG_ERROR, "请不要同时指定-n -o\n");
         ret = 1;
@@ -807,7 +807,7 @@ int command_upload(int argc, char **argv) {
     fprintf(stderr, "分片尺寸:%s\n", api->util_buffer0);
 #endif
 
-   
+
     if (stat(local_path, &(api->file_st)) == -1) {
         color_log(COLOR_LOG_ERROR, "%s 不存在\n", local_path);
         ret = 1;
@@ -816,14 +816,14 @@ int command_upload(int argc, char **argv) {
 
     ret = do_upload(local_path,
                     remote_path,
-                    option_overwrite, 
-                    option_new, 
+                    option_overwrite,
+                    option_new,
                     option_follow_link,
                     option_split_size);
 free:
 
     return ret;
-} 
+}
 //}}}
 
 int _do_download(
@@ -833,7 +833,7 @@ int overwrite,
 int create_new
 ) {
 //{{{
-    int ret             = 0; 
+    int ret             = 0;
     int local_exist     = 0;
     int stdout_output   = 0;
     const char *error   = NULL;
@@ -897,15 +897,15 @@ free:
 //}}}
 
 int do_download(const char *remote_path,
-const char *local_path,  
-int overwrite,             /* 是否覆盖 */ 
-int create_new             /* 是否新建 */ 
-) { 
+const char *local_path,
+int overwrite,             /* 是否覆盖 */
+int create_new             /* 是否新建 */
+) {
 //{{{
     int ret                 = 0;
     int stdout_output       = 0;
     PCSFile *file           = NULL;  /* 需要释放 */
-    PCSFile *t_file         = NULL; 
+    PCSFile *t_file         = NULL;
     const char *error       = NULL;
 
     int remote_root_offset  = 0;
@@ -957,7 +957,7 @@ int create_new             /* 是否新建 */
                 }
             }
         }
-    } 
+    }
 
     /* 下载单个文件 */
     if (!file->is_dir) {
@@ -1041,7 +1041,7 @@ int command_download(int argc, char **argv) {
 
     char *remote_path;
     char *local_path;
-    
+
     opterr = 0;
     while ((c = getopt(argc, argv, "on")) != -1) {
         switch (c) {
@@ -1053,7 +1053,7 @@ int command_download(int argc, char **argv) {
                 break;
         }
     }
- 
+
     if (option_overwrite && option_new) {
         color_log(COLOR_LOG_ERROR, "请不要同时指定-n -o\n");
         ret = 1;
@@ -1085,14 +1085,14 @@ int command_download(int argc, char **argv) {
         ret = 1;
         goto free;
     }
-    
+
     ret = do_download(remote_path,
                     local_path,
-                    option_overwrite, 
+                    option_overwrite,
                     option_new);
 free:
     return ret;
-} 
+}
 //}}}
 
 
@@ -1179,12 +1179,12 @@ int main(int argc, char **argv) {
         usage();
         return 1;
     }
-    
+
     char *command = argv[1];
 
     argc --;
     argv ++;
-    
+
     curl_global_init(CURL_GLOBAL_ALL);
 
     if (strcmp(command, "info") == 0) {
