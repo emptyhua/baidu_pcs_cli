@@ -3,7 +3,12 @@
 #依赖
 libcurl >= 7.18, centos/redhat 5自带curl版本较低，编译前请升级
 #安装
-编译前请修改`baidu_pcs.c`中的两个全局变量为自己的API Key和Secret Key
+请设置 etc/baidu_pcs.ini 中设置api_key及api_secret
+配置文件搜寻路径为:
+
+    ~/.baidu_pcs.ini
+    ./etc/baidu_pcs.ini
+
 ~~~
 /* pcs api key */
 static const char *option_api_key     = "";
