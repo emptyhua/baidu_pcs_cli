@@ -20,7 +20,7 @@ make install #这一步可以省略咯，就一个可行行文件，可以自己
 
     ~/.baidu_pcs.ini
     ./etc/baidu_pcs.ini
-
+~~~
 #使用方法
 ~~~
 使用方法: baidu_pcs 命令 [选项]
