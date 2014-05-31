@@ -34,7 +34,7 @@ if (item != NULL && item->type == cJSON_Number) { \
     item = cJSON_GetObjectItem(json, "error_msg"); \
     BaiduPCS_ThrowError(api, "%d-%s", api->error_code, item->valuestring); \
     goto free; \
-} 
+}
 
 static void _BaiduPCS_Json2File(BaiduPCS *api, PCSFile *file, cJSON *array) {
 //{{{
@@ -68,7 +68,7 @@ static void _BaiduPCS_Json2File(BaiduPCS *api, PCSFile *file, cJSON *array) {
         goto free;
     }
     file->ctime = (unsigned int)item->valueint;
-    
+
     //修改时间
     item = cJSON_GetObjectItem(array, "mtime");
     if (item == NULL || item->type != cJSON_Number) {
@@ -150,7 +150,7 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
         BaiduPCS_ThrowError(api, "JSON解析失败");
         goto free;
     }
-    
+
     item = cJSON_GetObjectItem(json, "error_description");
     if (item != NULL && item->type == cJSON_String) {
         BaiduPCS_ThrowError(api, "%s", item->valuestring);
@@ -192,9 +192,9 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
     }
     interval = item->valueint;
 
-    
+
     printf("授权码:%s\n"
-    "Web授权地址:%s\n"
+    "请访问Web授权地址进行授权:%s\n"
     "二维码授权:%s\n",
         user_code,
         verification_url,
@@ -214,8 +214,6 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
 
     while(1) {
         printf("等待验证....\n");
-        printf("请访问: https://openapi.baidu.com/device  输入授权码\n");
-
         sleep(interval);
 
         HttpClient_Init(client);
@@ -232,7 +230,7 @@ const char *BaiduPCS_Auth(BaiduPCS *api) {
             BaiduPCS_ThrowError(api, "JSON解析失败");
             goto free;
         }
-        
+
         item = cJSON_GetObjectItem(json2, "error");
         if (item != NULL && item->type == cJSON_String) {
             if (strcmp(item->valuestring, "authorization_pending") == 0) {
@@ -282,7 +280,7 @@ void BaiduPCS_Info(BaiduPCS *api, BaiduPCSInfo *info) {
     cJSON *json             = NULL; //需要释放
     cJSON *item             = NULL;
 
-    BaiduPCS_ResetError(api); 
+    BaiduPCS_ResetError(api);
 
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/quota?"
            "access_token=%s"
@@ -326,7 +324,7 @@ static void local_file_split(PCSFile *file, uint64_t split_threshold) {
         file->block_size = split_threshold;
 
         while(offset < file->size) {
-            block = PCSFileBlock_New(); 
+            block = PCSFileBlock_New();
             block->offset = offset;
 
             if (offset + split_threshold > file->size) {
@@ -346,7 +344,7 @@ static void local_file_split(PCSFile *file, uint64_t split_threshold) {
 
             offset += split_threshold;
         }
-    } 
+    }
 }
 //}}}
 
@@ -356,7 +354,7 @@ static size_t _BaiduPCS_UploadReadCallback(void *ptr, size_t size, size_t nitems
     int len = size * nitems;
     int left = block->size - block->readed_size;
     if (left < len) {
-        len = left; 
+        len = left;
     }
     if (!len) return 0;
     len = fread(ptr, 1, len, block->fp);
@@ -424,7 +422,7 @@ const char *ondup
 
 #ifdef DEBUG
         fprintf(stderr, "开始上传分片%d\n", i);
-#endif 
+#endif
         block->fp = fp;
 
         HttpClient_Init(client);
@@ -482,7 +480,7 @@ const char *ondup
     remote_path_encode = NULL;
 
 #ifdef DEBUG
-    fprintf(stderr, "request %s\n", url_buffer);    
+    fprintf(stderr, "request %s\n", url_buffer);
 #endif
 
     array = cJSON_CreateArray();
@@ -491,7 +489,7 @@ const char *ondup
         cJSON_AddItemToArray(array, cJSON_CreateString(block->md5));
         block = block->next;
     }
-    
+
     json = cJSON_CreateObject();
     cJSON_AddItemToObject(json, "block_list", array);
     tmp = cJSON_Print(json);
@@ -519,7 +517,7 @@ const char *ondup
     _BaiduPCS_Json2File(api, result, json);
 
     if (api->error[0] != '\0') {
-        PCSFile_Free(result);        
+        PCSFile_Free(result);
         result = NULL;
     }
 
@@ -575,7 +573,7 @@ const char *ondup
 
 #ifdef DEBUG
     fprintf(stderr, "开始上传小文件\n");
-#endif 
+#endif
 
     HttpClient_Init(client);
     curl_formadd(&post, &last,
@@ -600,7 +598,7 @@ const char *ondup
     _BaiduPCS_Json2File(api, result, json);
 
     if (api->error[0] != '\0') {
-        PCSFile_Free(result);        
+        PCSFile_Free(result);
         result = NULL;
     }
 
@@ -630,7 +628,7 @@ PCSFile *BaiduPCS_Upload(BaiduPCS *api,
     /* 最小分片 10M */
     uint64_t min_split_size = 10 * 1024 * 1024;
 
-    BaiduPCS_ResetError(api); 
+    BaiduPCS_ResetError(api);
 
     if (local_file == NULL) {
         BaiduPCS_ThrowError(api, "请指定本地文件");
@@ -677,7 +675,7 @@ void BaiduPCS_Download(BaiduPCS *api, const char *remote_file, FILE *local_fp) {
     const char *error           = NULL;
     char *remote_path_encode    = NULL;
 
-    BaiduPCS_ResetError(api); 
+    BaiduPCS_ResetError(api);
 
     remote_path_encode = curl_easy_escape(client->curl, remote_file, 0);
     sprintf(url_buffer, "https://d.pcs.baidu.com/rest/2.0/pcs/file?"
@@ -690,7 +688,7 @@ void BaiduPCS_Download(BaiduPCS *api, const char *remote_file, FILE *local_fp) {
 #ifdef DEBUG
     fprintf(stderr, "request %s\n", url_buffer);
 #endif
-    
+
     HttpClient_Init(client);
     HttpClient_SetFailRetry(client, 0, 0);
     curl_easy_setopt(client->curl, CURLOPT_WRITEFUNCTION, _BaiduPCS_Download_WriteData);
@@ -721,7 +719,7 @@ void BaiduPCS_Move(BaiduPCS *api, const char *remote_from, const char * remote_t
     char *from_encode       = NULL;
     char *to_encode         = NULL;
 
-    BaiduPCS_ResetError(api); 
+    BaiduPCS_ResetError(api);
 
     from_encode = curl_easy_escape(client->curl, remote_from, 0);
     to_encode   = curl_easy_escape(client->curl, remote_to, 0);
@@ -766,7 +764,7 @@ void BaiduPCS_Copy(BaiduPCS *api, const char *remote_from, const char * remote_t
     char *from_encode       = NULL;
     char *to_encode         = NULL;
 
-    BaiduPCS_ResetError(api); 
+    BaiduPCS_ResetError(api);
 
     from_encode = curl_easy_escape(client->curl, remote_from, 0);
     to_encode   = curl_easy_escape(client->curl, remote_to, 0);
@@ -808,7 +806,7 @@ void BaiduPCS_Remove(BaiduPCS *api, const char *remote_file) {
     cJSON *item             = NULL;
     char *path_encode       = NULL;
 
-    BaiduPCS_ResetError(api); 
+    BaiduPCS_ResetError(api);
 
     path_encode = curl_easy_escape(client->curl, remote_file, 0);
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/file?"
@@ -847,9 +845,9 @@ PCSFile *BaiduPCS_NewRemoteFile(BaiduPCS *api, const char *path) {
     cJSON *array            = NULL;
     cJSON *item             = NULL;
 
-    BaiduPCS_ResetError(api); 
+    BaiduPCS_ResetError(api);
 
-    file          = PCSFile_New();    
+    file          = PCSFile_New();
 
     path_encode = curl_easy_escape(client->curl, path, 0);
     sprintf(url_buffer, "https://pcs.baidu.com/rest/2.0/pcs/file?"
@@ -879,13 +877,13 @@ PCSFile *BaiduPCS_NewRemoteFile(BaiduPCS *api, const char *path) {
         BaiduPCS_ThrowError(api, "json.list is blank");
         goto free;
     }
-    
+
     item = cJSON_GetArrayItem(array, 0);
     if (item == NULL || item->type != cJSON_Object) {
         BaiduPCS_ThrowError(api, "json.list.item is not object");
         goto free;
     }
-    
+
     _BaiduPCS_Json2File(api, file, item);
 
 free:
@@ -893,7 +891,7 @@ free:
     if (json != NULL) {
         cJSON_Delete(json);
     }
-    
+
     if (api->error[0] != '\0') {
         if (file != NULL) {
             PCSFile_Free(file);
@@ -902,7 +900,7 @@ free:
     }
 
     return file;
-} 
+}
 //}}}
 
 PCSFileList *BaiduPCS_ListRemoteDir(BaiduPCS *api, const char *path) {
@@ -921,7 +919,7 @@ PCSFileList *BaiduPCS_ListRemoteDir(BaiduPCS *api, const char *path) {
     int i                   = 0;
     int length              = 0;
 
-    BaiduPCS_ResetError(api); 
+    BaiduPCS_ResetError(api);
 
     list          = PCSFileList_New();
 
@@ -949,7 +947,7 @@ PCSFileList *BaiduPCS_ListRemoteDir(BaiduPCS *api, const char *path) {
 
     array = item;
     length = cJSON_GetArraySize(array);
-    
+
     for (i = 0; i < length; i ++) {
         item = cJSON_GetArrayItem(array, i);
         if (item == NULL || item->type != cJSON_Object) {
@@ -963,7 +961,7 @@ PCSFileList *BaiduPCS_ListRemoteDir(BaiduPCS *api, const char *path) {
         if (BaiduPCS_GetError(api) != NULL) {
         }
     }
-       
+
 free:
 
     if (json != NULL) {
@@ -971,7 +969,7 @@ free:
     }
 
     return list;
-} 
+}
 //}}}
 
 
