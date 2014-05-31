@@ -2,18 +2,25 @@
 命令行工具基于libcurl+ [百度PCS的rest API](http://developer.baidu.com/wiki/index.php?title=docs/pcs/rest/file_data_apis_list) ，适用于linux,Mac OS
 #依赖
 libcurl >= 7.18, centos/redhat 5自带curl版本较低，编译前请升级
+
+    ubuntu:sudo apt-get install libcurl4-gnutls-dev
+
 #安装
-编译前请修改`baidu_pcs.c`中的两个全局变量为自己的API Key和Secret Key
-~~~
-/* pcs api key */
-static const char *option_api_key     = "";
-/* pcs api secret */
-static const char *option_api_secret  = "";
-~~~
-然后
+
+首先
 ~~~
 make
-make install #这一步可以省略咯，就一个可行行文件，可以自己随便copy到哪里。。
+make install
+~~~
+
+然后
+~~~
+请在 ~/.baidu_pcs.ini 中设置api_key及api_secret
+
+默认配置文件搜寻路径为:
+
+    ~/.baidu_pcs.ini
+    ./etc/baidu_pcs.ini
 ~~~
 #使用方法
 ~~~
