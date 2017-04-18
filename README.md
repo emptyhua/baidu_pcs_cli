@@ -1,11 +1,11 @@
-#说明
+# 说明
 命令行工具基于libcurl+ [百度PCS的rest API](http://developer.baidu.com/wiki/index.php?title=docs/pcs/rest/file_data_apis_list) ，适用于linux,Mac OS
-#依赖
+# 依赖
 libcurl >= 7.18, centos/redhat 5自带curl版本较低，编译前请升级
 
     ubuntu:sudo apt-get install libcurl4-gnutls-dev
 
-#安装
+# 安装
 
 首先
 ~~~
@@ -22,7 +22,7 @@ make install
     ~/.baidu_pcs.ini
     ./etc/baidu_pcs.ini
 ~~~
-#使用方法
+# 使用方法
 ~~~
 使用方法: baidu_pcs 命令 [选项]
 
@@ -53,7 +53,7 @@ cp       [远程路径] [目的远程路径] 复制远程文件或目录
 mv       [远程路径] [目的远程路径] 移动远程文件或目录
 rm       [远程路径] 删除远程文件或目录
 ~~~
-#你可能需要知道
+# 你可能需要知道
 1. pcs api只能操作/apps/xxx下的文件
 1. 默认文件分片尺寸为50M
 2. 下载可以输出到标准输出`baidu_pcs down /apps/xxx/test.mp4 - | mplayer -cache 8192 -`
